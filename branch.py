@@ -831,15 +831,16 @@ class Net(torch.nn.Module):
                 )
                 exact += nn[0] - exact[0]
                 fig = plt.figure()
-                plt.plot(grid, nn, label=f"NN at epoch {epoch}.")
-                plt.plot(grid, exact, label=f"Exact solution at epoch {epoch}.")
-                plt.legend()
+                plt.plot(grid, nn, label=f"NN")
+                plt.plot(grid, exact, label=f"exact")
+                plt.title(f"Epoch {epoch:04}")
+                plt.legend(loc="upper left")
                 fig.savefig(
-                    f"{self.working_dir}/plot/epoch_{epoch:03}.png", bbox_inches="tight"
+                    f"{self.working_dir}/plot/epoch_{epoch:04}.png", bbox_inches="tight"
                 )
                 plt.close()
                 torch.save(
-                    self.state_dict(), f"{self.working_dir}/model/epoch_{epoch:03}.pt"
+                    self.state_dict(), f"{self.working_dir}/model/epoch_{epoch:04}.pt"
                 )
                 self.train()
 
