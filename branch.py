@@ -35,14 +35,15 @@ class Net(torch.nn.Module):
         neurons=20,
         layers=5,
         branch_lr=1e-2,
-        lr_milestones=[3000//2],
-        lr_gamma=.1,
+        lr_milestones=[3000 // 2],
+        lr_gamma=0.1,
         weight_decay=0,
-        branch_nb_path_per_state=10000,
-        branch_nb_states=1,
-        branch_nb_states_per_batch=1,
+        branch_nb_path_per_state=1000,
+        branch_nb_states=10,
+        branch_nb_states_per_batch=10,
         epochs=3000,
         batch_normalization=True,
+        debug_p=False,
         antithetic=True,
         overtrain_rate=0.1,
         device="cpu",
@@ -69,7 +70,7 @@ class Net(torch.nn.Module):
         start = time.time()
         self.fdb_lookup = {
             tuple(deriv): fdb_nd(self.n, tuple(deriv))
-            for deriv in deriv_map[self.nprime :]
+            for deriv in deriv_map[self.nprime:]
         }
         self.fdb_runtime = time.time() - start
         self.mechanism_tot_len = (
@@ -78,7 +79,7 @@ class Net(torch.nn.Module):
             + sum(
                 [
                     len(self.fdb_lookup[tuple(deriv)])
-                    for deriv in deriv_map[self.nprime :]
+                    for deriv in deriv_map[self.nprime:]
                 ]
             )
         )
@@ -333,7 +334,7 @@ class Net(torch.nn.Module):
             order = np.insert(order, 0, 0)  # p has additionally t coordinate
             return self.nth_derivatives(
                 order, self(x.T, p_or_u="p", patch=patch), x
-            )  # .detach()
+            )
 
         if coordinate == -2:
             # coordinate -2 -> apply code to \partial_t p + .5 \Delta p
@@ -341,13 +342,13 @@ class Net(torch.nn.Module):
             order = np.insert(order, 0, 1)  # p has additionally t coordinate
             ans = self.nth_derivatives(
                 order, self(x.T, p_or_u="p", patch=patch), x
-            )  # .detach()
+            )
             order[0] -= 1
             for i in range(self.dim):
                 order[i + 1] += 2  # Laplacian
                 ans += self.beta * self.nth_derivatives(
                     order, self(x.T, p_or_u="p", patch=patch), x
-                )  # .detach()
+                )
                 order[i + 1] -= 2
             return ans
 
@@ -365,7 +366,7 @@ class Net(torch.nn.Module):
                     y.append(
                         self.nth_derivatives(
                             order, self(tx.T, p_or_u="p", patch=patch), tx
-                        )  # .detach()
+                        )
                     )
                 else:
                     y.append(
@@ -377,7 +378,7 @@ class Net(torch.nn.Module):
 
             return self.nth_derivatives(
                 code - 1, self.f_fun(y, coordinate), y
-            )  # .detach()
+            )
 
         return fun_val
 
@@ -739,9 +740,7 @@ class Net(torch.nn.Module):
                     c,
                     patch,
                     idx,
-                )  # .detach()
-                # plt.plot(yy_tmp[0, :].detach().cpu(), '+')
-                # plt.show()
+                )
                 if discard_outlier:
                     # let (lo, hi) be
                     # (self.outlier_percentile, 100 - self.outlier_percentile)
@@ -823,15 +822,23 @@ class Net(torch.nn.Module):
                     .detach()
                     .cpu()
                 )
-                exact = self.exact_p_fun(torch.tensor(grid_nd.T, device=self.device)).detach().cpu()
-                exact += (nn[0] - exact[0])
+                exact = (
+                    self.exact_p_fun(torch.tensor(grid_nd.T, device=self.device))
+                    .detach()
+                    .cpu()
+                )
+                exact += nn[0] - exact[0]
                 fig = plt.figure()
                 plt.plot(grid, nn, label=f"NN at epoch {epoch}.")
                 plt.plot(grid, exact, label=f"Exact solution at epoch {epoch}.")
                 plt.legend()
-                fig.savefig(f"{self.working_dir}/plot/epoch_{epoch:03}.png", bbox_inches="tight")
+                fig.savefig(
+                    f"{self.working_dir}/plot/epoch_{epoch:03}.png", bbox_inches="tight"
+                )
                 plt.close()
-                torch.save(self.state_dict(), f"{self.working_dir}/model/epoch_{epoch:03}.pt")
+                torch.save(
+                    self.state_dict(), f"{self.working_dir}/model/epoch_{epoch:03}.pt"
+                )
                 self.train()
 
                 logging.info(
@@ -845,11 +852,11 @@ if __name__ == "__main__":
 
     # configurations
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    problem = ['taylor_green_2d', 'abc_3d'][0]
+    problem = ["taylor_green_2d", "abc_3d"][0]
 
-    if problem == 'taylor_green_2d':
+    if problem == "taylor_green_2d":
         # taylor green vortex
-        T, x_lo, x_hi, beta = 0.25, 0, 2 * math.pi, 1.
+        T, x_lo, x_hi, beta = 0.25, 0, 2 * math.pi, 1.0
         # deriv_map is n x d array defining lambda_1, ..., lambda_n
         deriv_map = np.array(
             [
@@ -871,9 +878,9 @@ if __name__ == "__main__":
             ]
         )
         deriv_condition_zeta_map = np.array([0, 1])
-    elif problem == 'abc_3d':
+    elif problem == "abc_3d":
         # ABC flow
-        T, x_lo, x_hi, beta = 0.1, 0, 2 * math.pi, .01
+        T, x_lo, x_hi, beta = 0.1, 0, 2 * math.pi, 0.01
         A = B = 0.5
         C = 0.0
         # deriv_map is n x d array defining lambda_1, ..., lambda_n
@@ -907,23 +914,24 @@ if __name__ == "__main__":
         deriv_condition_zeta_map = np.array([0, 1, 2])
 
     _, dim = deriv_map.shape
+
     def f_fun(y, i):
         """
         TODO: some descriptions about deriv_map...
         """
         f = -y[i]
         for j in range(dim):
-            f += -y[dim + j] * y[2*dim + dim * i + j]
+            f += -y[dim + j] * y[2 * dim + dim * i + j]
         return f
 
     def g_fun(x, i):
-        if problem == 'taylor_green_2d':
+        if problem == "taylor_green_2d":
             # taylor green vortex
             if i == 0:
                 return -torch.cos(x[0]) * torch.sin(x[1])
             else:
                 return torch.sin(x[0]) * torch.cos(x[1])
-        elif problem == 'abc_3d':
+        elif problem == "abc_3d":
             # ABC flow
             if i == 0:
                 return A * torch.sin(x[2]) + C * torch.cos(x[1])
@@ -933,21 +941,20 @@ if __name__ == "__main__":
                 return C * torch.sin(x[1]) + B * torch.cos(x[0])
 
     def exact_p_fun(x):
-        if problem == 'taylor_green_2d':
+        if problem == "taylor_green_2d":
             # taylor green vortex
             return (
-                    -1/4 * torch.exp(-4 * beta * (T - x[:, 0]))
-                    * (torch.cos(2 * x[:, 1]) + torch.sin(2 * x[:, 2]))
+                -1
+                / 4
+                * torch.exp(-4 * beta * (T - x[:, 0]))
+                * (torch.cos(2 * x[:, 1]) + torch.sin(2 * x[:, 2]))
             )
-        elif problem == 'abc_3d':
+        elif problem == "abc_3d":
             # ABC flow
-            return (
-                    -torch.exp(-2 * beta * (T - x[:, 0]))
-                    * (
-                            A * C * torch.sin(x[:, 3]) * torch.cos(x[:, 2])
-                            + B * A * torch.sin(x[:, 1]) * torch.cos(x[:, 3])
-                            + C * B * torch.sin(x[:, 2]) * torch.cos(x[:, 1])
-                    )
+            return -torch.exp(-2 * beta * (T - x[:, 0])) * (
+                A * C * torch.sin(x[:, 3]) * torch.cos(x[:, 2])
+                + B * A * torch.sin(x[:, 1]) * torch.cos(x[:, 3])
+                + C * B * torch.sin(x[:, 2]) * torch.cos(x[:, 1])
             )
 
     # initialize model and training
@@ -968,6 +975,11 @@ if __name__ == "__main__":
         verbose=True,
         epochs=200,
         branch_lr=1e-2,
+        lr_milestones=[200 // 2],
+        lr_gamma=0.0,
+        branch_nb_path_per_state=1000,
+        branch_nb_states=100,
+        branch_nb_states_per_batch=100,
         beta=beta,
         layers=3,
         batch_normalization=False,
