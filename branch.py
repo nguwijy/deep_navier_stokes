@@ -177,7 +177,7 @@ class Net(torch.nn.Module):
             device=device,
         )
         self.adjusted_t_boundaries = [
-            (lo, hi) for hi, lo in zip(self.t_boundaries[1:], self.t_boundaries[1:])
+            (lo, hi) for hi, lo in zip(self.t_boundaries[:-1], self.t_boundaries[1:])
         ]
         timestr = time.strftime("%Y%m%d-%H%M%S")  # current time stamp
         self.working_dir = f"logs/{timestr}"
