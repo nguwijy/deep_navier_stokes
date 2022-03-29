@@ -144,6 +144,7 @@ class Net(torch.nn.Module):
             "softplus": torch.nn.ReLU(),
         }[branch_activation]
         self.batch_normalization = batch_normalization
+        self.debug_p = debug_p
         self.nb_states = branch_nb_states
         self.nb_states_per_batch = branch_nb_states_per_batch
         self.nb_path_per_state = branch_nb_path_per_state
@@ -189,8 +190,9 @@ class Net(torch.nn.Module):
         layer = self.u_layer if p_or_u == "u" else self.p_layer
         bn_layer = self.u_bn_layer if p_or_u == "u" else self.p_bn_layer
 
-        # if p_or_u == "p":
-        #     return self.exact_p_fun(x)
+        if p_or_u == "p" and self.debug_p:
+            # return the exact p for debug purposes
+            return self.exact_p_fun(x)
 
         # normalization to make sure x is roughly within the range of [0, 1] x (dim + 1)
         x_lo = torch.tensor([self.t_lo] + [self.x_lo] * self.dim, device=self.device)
@@ -983,5 +985,6 @@ if __name__ == "__main__":
         beta=beta,
         layers=3,
         batch_normalization=False,
+        debug_p=False,
     )
     model.train_and_eval()
