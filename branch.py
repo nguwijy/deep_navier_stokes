@@ -987,5 +987,6 @@ if __name__ == "__main__":
         layers=3,
         batch_normalization=False,
         debug_p=False,
+        branch_activation="relu",
     )
     model.train_and_eval()
