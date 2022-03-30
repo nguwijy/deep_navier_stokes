@@ -339,7 +339,7 @@ class Net(torch.nn.Module):
             )
 
         if coordinate == -2:
-            # coordinate -2 -> apply code to \partial_t p + .5 \Delta p
+            # coordinate -2 -> apply code to \partial_t p + beta * \Delta p
             order = -code - 1
             order = np.insert(order, 0, 1)  # p has additionally t coordinate
             ans = self.nth_derivatives(
@@ -365,9 +365,10 @@ class Net(torch.nn.Module):
             y = []
             for idx, order in enumerate(self.deriv_map):
                 if self.zeta_map[idx] < 0:
+                    # p has additionally t coordinate
                     y.append(
                         self.nth_derivatives(
-                            order, self(tx.T, p_or_u="p", patch=patch), tx
+                            np.insert(order, 0, 0), self(tx.T, p_or_u="p", patch=patch), tx
                         )
                     )
                 else:
@@ -432,7 +433,7 @@ class Net(torch.nn.Module):
 
         if coordinate < 0:
             # coordinate -1 -> apply code to p
-            # coordinate -2 -> apply code to \partial_t p + .5 \Delta p
+            # coordinate -2 -> apply code to \partial_t p + beta * \Delta p
             mask_now = mask.bool()
             tx = torch.cat((t.unsqueeze(0), x), dim=0)
             tmp = H[mask_now] * self.code_to_function(
