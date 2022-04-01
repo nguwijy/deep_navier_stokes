@@ -46,6 +46,7 @@ class Net(torch.nn.Module):
         batch_normalization=True,
         debug_p=False,
         antithetic=True,
+        poisson_loss=False,
         overtrain_rate=0.1,
         device="cpu",
         branch_activation="tanh",
@@ -171,6 +172,7 @@ class Net(torch.nn.Module):
         )
         self.epochs = epochs
         self.antithetic = antithetic
+        self.poisson_loss = poisson_loss
         self.device = device
         self.verbose = verbose
         self.fix_all_dim_except_first = fix_all_dim_except_first
@@ -793,12 +795,60 @@ class Net(torch.nn.Module):
                 start = time.time()
                 x, y = self.gen_sample(
                     patch=p,
-                    coordinate=self.deriv_condition_zeta_map,
-                    code=-self.deriv_condition_deriv_map - 1,
-                    discard_outlier=False,
+                    coordinate=np.array(range(self.dim)),
+                    code=-np.ones((self.dim, self.dim), dtype=int),
+                    discard_outlier=True,
                 )
-                y = y.sum(dim=-1)
-                loss = self.loss(y, torch.zeros_like(y))
+                predict = self(x, patch=p)
+                x_lo = torch.tensor([self.t_lo] + [self.x_lo] * self.dim, device=self.device)
+                x_hi = torch.tensor([self.T] + [self.x_hi] * self.dim, device=self.device)
+                states_per_batch = 100000
+                unif = (
+                    torch.rand((self.dim + 1) * states_per_batch, device=self.device, requires_grad=True)
+                         .reshape(states_per_batch, self.dim + 1)
+                )
+                x = (x_lo + (x_hi - x_lo) * unif).T
+                grad = 0
+                for (idx, c) in zip(self.deriv_condition_zeta_map, self.deriv_condition_deriv_map):
+                    # additional t coordinate
+                    grad += self.nth_derivatives(
+                        np.insert(c, 0, 0), self(x.T, patch=p)[:, idx], x
+                    )
+                loss = self.loss(y, predict) + self.loss(grad, torch.zeros_like(grad))
+
+                # additional loss regarding poisson equation
+                if self.poisson_loss:
+                    poisson_lhs, poisson_rhs = 0, 0
+                    order = np.array([0] * (self.dim + 1))
+                    for i in range(self.dim):
+                        order[i + 1] += 2
+                        poisson_lhs += self.nth_derivatives(
+                            order, self(x.T, p_or_u="p", patch=p), x
+                        )
+                        order[i + 1] -= 2
+                    for i in range(self.dim):
+                        for j in range(self.dim):
+                            order[i + 1] += 1
+                            tmp = self.nth_derivatives(
+                                order, self(x.T, patch=p)[:, j], x
+                            )
+                            order[i + 1] -= 1
+                            order[j + 1] += 1
+                            tmp *= self.nth_derivatives(
+                                order, self(x.T, patch=p)[:, j], x
+                            )
+                            order[j + 1] -= 1
+                            poisson_rhs -= tmp
+                    loss += self.loss(poisson_lhs, poisson_rhs)
+
+                # x, y = self.gen_sample(
+                #     patch=p,
+                #     coordinate=self.deriv_condition_zeta_map,
+                #     code=-self.deriv_condition_deriv_map - 1,
+                #     discard_outlier=True,
+                # )
+                # y = y.sum(dim=-1)
+                # loss = self.loss(y, torch.zeros_like(y))
 
                 # update model weights and schedule
                 loss.backward()
@@ -1026,6 +1076,7 @@ if __name__ == "__main__":
         layers=3,
         batch_normalization=False,
         debug_p=False,
-        branch_activation="relu",
+        branch_activation="tanh",
+        poisson_loss=True,
     )
     model.train_and_eval()
