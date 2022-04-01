@@ -711,6 +711,7 @@ class Net(torch.nn.Module):
         states_per_batch = min(nb_states, self.nb_states_per_batch)
         batches = math.ceil(nb_states / states_per_batch)
         t_lo, t_hi = self.adjusted_t_boundaries[patch]
+        t_hi = min(self.t_hi, t_hi)
         x_lo, x_hi = self.adjusted_x_boundaries
         xx, yy = [], []
         for _ in range(batches):
