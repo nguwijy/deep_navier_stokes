@@ -54,6 +54,7 @@ class Net(torch.nn.Module):
         fix_all_dim_except_first=False,
         branch_patches=1,
         outlier_percentile=1,
+        outlier_multiplier=10,
         **kwargs,
     ):
         super(Net, self).__init__()
@@ -164,6 +165,7 @@ class Net(torch.nn.Module):
         self.beta = beta
         self.delta_t = (T - t_lo) / branch_patches
         self.outlier_percentile = outlier_percentile
+        self.outlier_multiplier = outlier_multiplier
 
         self.exponential_lambda = (
             branch_exponential_lambda
@@ -761,7 +763,7 @@ class Net(torch.nn.Module):
                             1 - self.outlier_percentile / 100, dim=1, keepdim=True
                         ),
                     )
-                    lo, hi = lo - 1000 * (hi - lo), hi + 1000 * (hi - lo)
+                    lo, hi = lo - self.outlier_multiplier * (hi - lo), hi + self.outlier_multiplier * (hi - lo)
                     mask = torch.logical_and(lo <= yy_tmp, yy_tmp <= hi)
                 else:
                     mask = ~yy_tmp.isnan()
