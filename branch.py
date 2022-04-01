@@ -1041,7 +1041,7 @@ if __name__ == "__main__":
                 -1
                 / 4
                 * torch.exp(-4 * beta * (T - x[:, 0]))
-                * (torch.cos(2 * x[:, 1]) + torch.sin(2 * x[:, 2]))
+                * (torch.cos(2 * x[:, 1]) + torch.cos(2 * x[:, 2]))
             )
         elif problem == "abc_3d":
             # ABC flow
