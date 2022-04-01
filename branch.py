@@ -838,7 +838,7 @@ class Net(torch.nn.Module):
                             order[i + 1] -= 1
                             order[j + 1] += 1
                             tmp *= self.nth_derivatives(
-                                order, self(x.T, patch=p)[:, j], x
+                                order, self(x.T, patch=p)[:, i], x
                             )
                             order[j + 1] -= 1
                             poisson_rhs -= tmp
