@@ -104,9 +104,10 @@ class Net(torch.nn.Module):
         self.u_bn_layer = torch.nn.ModuleList(
             [
                 torch.nn.ModuleList(
-                    [
+                    [torch.nn.BatchNorm1d(self.dim + 1, device=device)]
+                    + [
                         torch.nn.BatchNorm1d(neurons, device=device)
-                        for _ in range(layers)
+                        for _ in range(layers + 1)
                     ]
                 )
                 for _ in range(branch_patches)
@@ -128,9 +129,10 @@ class Net(torch.nn.Module):
         self.p_bn_layer = torch.nn.ModuleList(
             [
                 torch.nn.ModuleList(
-                    [
+                    [torch.nn.BatchNorm1d(self.dim + 1, device=device)]
+                    + [
                         torch.nn.BatchNorm1d(neurons, device=device)
-                        for _ in range(layers)
+                        for _ in range(layers + 1)
                     ]
                 )
                 for _ in range(branch_patches)
@@ -200,20 +202,11 @@ class Net(torch.nn.Module):
             # return the exact p for debug purposes
             return self.exact_p_fun(x)
 
-        # normalization to make sure x is roughly within the range of [0, 1] x (dim + 1)
-        x_lo = torch.tensor([self.t_lo] + [self.x_lo] * self.dim, device=self.device)
-        x_hi = torch.tensor([self.T] + [self.x_hi] * self.dim, device=self.device)
-        x = (x - x_lo) / (x_hi - x_lo)
-
-        if x.shape[0] <= 1 and self.batch_normalization:
-            # TODO: find a better solution..
-            # add a ghost point when batch size is one for the batch normalization
-            x = x.repeat(2, 1)
-            x[1] *= 0.99
-
         if patch is not None:
             y = x
-            for idx, (f, bn) in enumerate(zip(layer[patch][:-1], bn_layer[patch])):
+            if self.batch_normalization:
+                y = bn_layer[patch][0](y)
+            for idx, (f, bn) in enumerate(zip(layer[patch][:-1], bn_layer[patch][1:])):
                 tmp = f(y)
                 tmp = self.activation(tmp)
                 if self.batch_normalization:
@@ -229,7 +222,9 @@ class Net(torch.nn.Module):
             yy = []
             for p in range(self.patches):
                 y = x
-                for idx, (f, bn) in enumerate(zip(layer[p][:-1], bn_layer[p])):
+                if self.batch_normalization:
+                    y = bn_layer[p][0](y)
+                for idx, (f, bn) in enumerate(zip(layer[p][:-1], bn_layer[p][1:])):
                     tmp = f(y)
                     tmp = self.activation(tmp)
                     if self.batch_normalization:
@@ -790,18 +785,20 @@ class Net(torch.nn.Module):
                 gamma=self.lr_gamma,
             )
 
-            self.train()  # training mode
             # loop through epochs
             for epoch in range(self.epochs):
                 # clear gradients and evaluate training loss
                 optimizer.zero_grad()
                 start = time.time()
+                # the running statistics for p is very different from time to time, so we do not track them
+                self.eval()
                 x, y = self.gen_sample(
                     patch=p,
                     coordinate=np.array(range(self.dim)),
                     code=-np.ones((self.dim, self.dim), dtype=int),
                     discard_outlier=True,
                 )
+                self.train()
                 predict = self(x, patch=p)
                 x_lo = torch.tensor([self.t_lo] + [self.x_lo] * self.dim, device=self.device)
                 x_hi = torch.tensor([self.T] + [self.x_hi] * self.dim, device=self.device)
@@ -917,12 +914,10 @@ class Net(torch.nn.Module):
                 torch.save(
                     self.state_dict(), f"{self.working_dir}/model/epoch_{epoch:04}.pt"
                 )
-                self.train()
 
                 logging.info(
                     f"Epoch {epoch:3.0f}: one loop takes {time.time() - start:4.0f} seconds with loss {loss.detach():.2E}."
                 )
-        self.eval()
 
 
 if __name__ == "__main__":
@@ -1076,8 +1071,8 @@ if __name__ == "__main__":
         branch_nb_states=100,
         branch_nb_states_per_batch=100,
         beta=beta,
-        layers=3,
-        batch_normalization=False,
+        layers=2,
+        batch_normalization=True,
         debug_p=False,
         branch_activation="tanh",
         poisson_loss=True,
