@@ -25,6 +25,7 @@ class Net(torch.nn.Module):
         deriv_condition_zeta_map,
         phi_fun=(lambda x: x),
         exact_p_fun=None,
+        exact_u_fun=None,
         x_lo=-10.0,
         x_hi=10.0,
         t_lo=0.0,
@@ -58,6 +59,7 @@ class Net(torch.nn.Module):
         self.f_fun = f_fun
         self.phi_fun = phi_fun
         self.exact_p_fun = exact_p_fun
+        self.exact_u_fun = exact_u_fun
         self.deriv_map = deriv_map
         self.zeta_map = zeta_map
         self.deriv_condition_deriv_map = deriv_condition_deriv_map
@@ -247,6 +249,9 @@ class Net(torch.nn.Module):
         os.mkdir(self.working_dir)
         os.mkdir(f"{self.working_dir}/model")
         os.mkdir(f"{self.working_dir}/plot")
+        os.mkdir(f"{self.working_dir}/plot/p")
+        for i in range(self.dim):
+            os.mkdir(f"{self.working_dir}/plot/u{i}")
         formatter = "%(asctime)s | %(name)s |  %(levelname)s: %(message)s"
         logging.basicConfig(
             filename=f"{self.working_dir}/testrun.log",
@@ -831,9 +836,31 @@ class Net(torch.nn.Module):
                 plt.title(f"Epoch {epoch:04}")
                 plt.legend(loc="upper left")
                 fig.savefig(
-                    f"{self.working_dir}/plot/epoch_{epoch:04}.png", bbox_inches="tight"
+                    f"{self.working_dir}/plot/p/epoch_{epoch:04}.png", bbox_inches="tight"
                 )
                 plt.close()
+                nn = (
+                    self(
+                        torch.tensor(grid_nd.T, device=self.device), patch=0
+                    )
+                    .detach()
+                    .cpu()
+                )
+                for i in range(self.dim):
+                    exact = (
+                        self.exact_u_fun(torch.tensor(grid_nd.T, device=self.device), i)
+                        .detach()
+                        .cpu()
+                    )
+                    fig = plt.figure()
+                    plt.plot(grid, nn[:, i], label=f"NN")
+                    plt.plot(grid, exact, label=f"exact")
+                    plt.title(f"Epoch {epoch:04}")
+                    plt.legend(loc="upper left")
+                    fig.savefig(
+                        f"{self.working_dir}/plot/u{i}/epoch_{epoch:04}.png", bbox_inches="tight"
+                    )
+                    plt.close()
                 torch.save(
                     self.state_dict(), f"{self.working_dir}/model/epoch_{epoch:04}.pt"
                 )
@@ -938,6 +965,22 @@ if __name__ == "__main__":
             else:
                 return C * torch.sin(x[1]) + B * torch.cos(x[0])
 
+    def exact_u_fun(x, i):
+        if problem == "taylor_green_2d":
+            # taylor green vortex
+            if i == 0:
+                return -torch.cos(x[:, 1]) * torch.sin(x[:, 2]) * torch.exp(-2 * beta * (T - x[:, 0]))
+            else:
+                return torch.sin(x[:, 1]) * torch.cos(x[:, 2]) * torch.exp(-2 * beta * (T - x[:, 0]))
+        elif problem == "abc_3d":
+            # ABC flow
+            if i == 0:
+                return (A * torch.sin(x[:, 3]) + C * torch.cos(x[:, 2])) * torch.exp(-beta * (T - x[:, 0]))
+            elif i == 1:
+                return (B * torch.sin(x[:, 1]) + A * torch.cos(x[:, 3])) * torch.exp(-beta * (T - x[:, 0]))
+            else:
+                return (C * torch.sin(x[:, 2]) + B * torch.cos(x[:, 1])) * torch.exp(-beta * (T - x[:, 0]))
+
     def exact_p_fun(x):
         if problem == "taylor_green_2d":
             # taylor green vortex
@@ -964,6 +1007,7 @@ if __name__ == "__main__":
         f_fun=f_fun,
         phi_fun=g_fun,
         exact_p_fun=exact_p_fun,
+        exact_u_fun=exact_u_fun,
         T=T,
         t_lo=0.0,
         t_hi=T,
