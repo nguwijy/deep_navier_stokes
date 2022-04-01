@@ -92,7 +92,7 @@ class Net(torch.nn.Module):
                         torch.nn.Linear(neurons, neurons, device=device)
                         for _ in range(layers)
                     ]
-                    + [torch.nn.Linear(neurons, 1, device=device)]
+                    + [torch.nn.Linear(neurons, self.dim, device=device)]
                 )
                 for _ in range(branch_patches)
             ]
@@ -218,7 +218,7 @@ class Net(torch.nn.Module):
                     # resnet
                     y = tmp + y
 
-            y = layer[patch][-1](y).reshape(-1)
+            y = layer[patch][-1](y)
         else:
             yy = []
             for p in range(self.patches):
@@ -233,7 +233,7 @@ class Net(torch.nn.Module):
                     else:
                         # resnet
                         y = tmp + y
-                yy.append(layer[p][-1](y).reshape(-1))
+                yy.append(layer[p][-1](y))
             idx = self.bisect_left(x[:, 0])
             y = torch.gather(torch.stack(yy, dim=-1), -1, idx.reshape(-1, 1)).squeeze(
                 -1
