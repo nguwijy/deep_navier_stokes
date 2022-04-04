@@ -202,6 +202,11 @@ class Net(torch.nn.Module):
             # return the exact p for debug purposes
             return self.exact_p_fun(x)
 
+        # normalization to make sure x is roughly within the range of [0, 1] x (dim + 1)
+        x_lo = torch.tensor([self.t_lo] + [self.x_lo] * self.dim, device=self.device)
+        x_hi = torch.tensor([self.T] + [self.x_hi] * self.dim, device=self.device)
+        x = (x - x_lo) / (x_hi - x_lo)
+
         if patch is not None:
             y = x
             if self.batch_normalization:
@@ -1066,15 +1071,16 @@ if __name__ == "__main__":
         epochs=3000,
         branch_lr=1e-2,
         lr_milestones=[1000, 2000],
-        lr_gamma=.1,
+        lr_gamma=.5,
         branch_nb_path_per_state=100,
         branch_nb_states=100,
         branch_nb_states_per_batch=100,
         beta=beta,
         layers=2,
-        batch_normalization=True,
+        batch_normalization=False,
         debug_p=False,
         branch_activation="tanh",
         poisson_loss=True,
     )
+    # model.load_state_dict(torch.load("logs/20220401-154324/model/epoch_2667.pt"))
     model.train_and_eval()
