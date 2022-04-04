@@ -887,7 +887,7 @@ class Net(torch.nn.Module):
                     .detach()
                     .cpu()
                 )
-                exact += nn[0] - exact[0]
+                exact += nn.mean() - exact.mean()
                 fig = plt.figure()
                 plt.plot(grid, nn, label=f"NN")
                 plt.plot(grid, exact, label=f"exact")
