@@ -44,7 +44,7 @@ class Net(torch.nn.Module):
         branch_nb_states_per_batch=10,
         epochs=3000,
         batch_normalization=True,
-        debug_p=False,
+        debug=False,
         antithetic=True,
         poisson_loss=False,
         overtrain_rate=0.1,
@@ -150,7 +150,7 @@ class Net(torch.nn.Module):
             "softplus": torch.nn.ReLU(),
         }[branch_activation]
         self.batch_normalization = batch_normalization
-        self.debug_p = debug_p
+        self.debug = debug
         self.nb_states = branch_nb_states
         self.nb_states_per_batch = branch_nb_states_per_batch
         self.nb_path_per_state = branch_nb_path_per_state
@@ -198,9 +198,12 @@ class Net(torch.nn.Module):
         layer = self.u_layer if p_or_u == "u" else self.p_layer
         bn_layer = self.u_bn_layer if p_or_u == "u" else self.p_bn_layer
 
-        if p_or_u == "p" and self.debug_p:
-            # return the exact p for debug purposes
-            return self.exact_p_fun(x)
+        if self.debug:
+            # return the exact function for debug purposes
+            if p_or_u == "p":
+                return self.exact_p_fun(x)
+            else:
+                return torch.stack([self.exact_u_fun(x, i) for i in range(self.dim)], dim=-1)
 
         # normalization to make sure x is roughly within the range of [0, 1] x (dim + 1)
         x_lo = torch.tensor([self.t_lo] + [self.x_lo] * self.dim, device=self.device)
@@ -1078,7 +1081,7 @@ if __name__ == "__main__":
         beta=beta,
         layers=2,
         batch_normalization=False,
-        debug_p=False,
+        debug=False,
         branch_activation="tanh",
         poisson_loss=True,
     )
