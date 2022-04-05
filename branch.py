@@ -46,7 +46,8 @@ class Net(torch.nn.Module):
         batch_normalization=True,
         debug=False,
         antithetic=True,
-        poisson_loss=False,
+        poisson_loss_coeff=0.,
+        deriv_condition_coeff=1.,
         overtrain_rate=0.1,
         device="cpu",
         branch_activation="tanh",
@@ -176,7 +177,8 @@ class Net(torch.nn.Module):
         )
         self.epochs = epochs
         self.antithetic = antithetic
-        self.poisson_loss = poisson_loss
+        self.poisson_loss_coeff = poisson_loss_coeff
+        self.deriv_condition_coeff = deriv_condition_coeff
         self.device = device
         self.verbose = verbose
         self.fix_all_dim_except_first = fix_all_dim_except_first
@@ -842,10 +844,10 @@ class Net(torch.nn.Module):
                     grad += self.nth_derivatives(
                         np.insert(c, 0, 0), self(x.T, patch=p)[:, idx], x
                     )
-                loss = self.loss(y, predict) + self.loss(grad, torch.zeros_like(grad))
+                loss = self.loss(y, predict) + self.deriv_condition_coeff * self.loss(grad, torch.zeros_like(grad))
 
                 # additional loss regarding poisson equation
-                if self.poisson_loss:
+                if self.poisson_loss_coeff > 0:
                     poisson_lhs, poisson_rhs = 0, 0
                     order = np.array([0] * (self.dim + 1))
                     for i in range(self.dim):
@@ -867,7 +869,7 @@ class Net(torch.nn.Module):
                             )
                             order[j + 1] -= 1
                             poisson_rhs -= tmp
-                    loss += self.loss(poisson_lhs, poisson_rhs)
+                    loss += self.poisson_loss_coeff * self.loss(poisson_lhs, poisson_rhs)
 
                 # x, y = self.gen_sample(
                 #     patch=p,
@@ -1103,7 +1105,8 @@ if __name__ == "__main__":
         batch_normalization=False,
         debug=False,
         branch_activation="tanh",
-        poisson_loss=True,
+        poisson_loss_coeff=0.,
+        deriv_condition_coeff=1.,
     )
     # model.error_calculation("logs/20220404-144009/model/epoch_2999.pt")
     # model.error_calculation("logs/20220404-143842/model/epoch_2999.pt")
