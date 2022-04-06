@@ -193,6 +193,44 @@ class Net(torch.nn.Module):
         self.working_dir = f"logs/{timestr}"
         self.log_config()
 
+    def calculate_p_from_u(self, x):
+        nb_mc = 1000
+        x = x.repeat(nb_mc, 1, 1)
+        tau_lo, tau_hi = 1e-5, 6
+        unif = (
+            torch.rand(nb_mc * x.shape[1], device=self.device)
+                 .reshape(nb_mc, -1, 1)
+        )
+        tau = tau_lo + (tau_hi - tau_lo) * unif
+        y = torch.sqrt(tau) * torch.randn(
+                nb_mc, x.shape[1], self.dim, device=self.device
+            )
+        x = x + torch.cat((torch.zeros_like(y[:, :, :1]), y), dim=-1)
+        x = x.reshape(-1, dim + 1).T
+        order = np.array([0] * (self.dim + 1))
+        ans = 0
+        for i in range(self.dim):
+            for j in range(self.dim):
+                order[i + 1] += 1
+                tmp = self.nth_derivatives(
+                    order, self(x.T, patch=0)[:, j], x
+                )
+                order[i + 1] -= 1
+                order[j + 1] += 1
+                tmp *= self.nth_derivatives(
+                    order, self(x.T, patch=0)[:, i], x
+                )
+                order[j + 1] -= 1
+                ans += tmp
+        ans = ans.reshape(nb_mc, -1)
+        ans *= (y**2).sum(dim=-1)
+        if self.dim > 2:
+            ans /= (self.dim - 2)
+        elif self.dim == 2:
+            ans *= -torch.log((y**2).sum(dim=-1).sqrt())
+        ans *= ((tau_hi - tau_lo) / (2 * tau[:, :, 0]))
+        return ans.mean(dim=0)
+
     def forward(self, x, patch=None, p_or_u="u"):
         """
         self(x) evaluates the neural network approximation NN(x)
@@ -206,6 +244,11 @@ class Net(torch.nn.Module):
                 return self.exact_p_fun(x)
             else:
                 return torch.stack([self.exact_u_fun(x, i) for i in range(self.dim)], dim=-1)
+
+        # if p_or_u == "p":
+        #     # get p from u using inverse Laplacian for the MC integration
+        #     # this requires a lot of memory
+        #     return self.calculate_p_from_u(x)
 
         # normalization to make sure x is roughly within the range of [0, 1] x (dim + 1)
         x_lo = torch.tensor([self.t_lo] + [self.x_lo] * self.dim, device=self.device)
