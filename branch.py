@@ -508,6 +508,360 @@ class Net(torch.nn.Module):
         if ~mask.any():
             return ans
 
+        nb_states, _ = t.shape
+        tau_lo, tau_hi = 1e-5, 6  # for negative coordinate
+
+        if coordinate < 0:
+            # seems to work now.... double check again and move to -2 coordinate
+            unif = (
+                torch.rand(nb_states * self.nb_path_per_state, device=self.device)
+                     .reshape(nb_states, self.nb_path_per_state)
+            )
+            tau = tau_lo + (tau_hi - tau_lo) * unif
+            dw = self.gen_bm(tau, nb_states)
+            unif = torch.rand(nb_states, self.nb_path_per_state, device=self.device)
+            order = -code - 1
+            L = [fdb for fdb in fdb_nd(2, order) if max(fdb.lamb) < 2]
+            idx_counter = 0
+            idx = (unif * len(L) * self.dim ** 2).long()
+            if coordinate == -2:
+                idx *= (self.dim + 2)
+            for i in range(self.dim):
+                for j in range(self.dim):
+                    for fdb in L:
+                        if coordinate == -1:
+                            # coordinate -1 -> apply code to p
+                            mask_tmp = mask.bool() * (idx == idx_counter)
+                            if mask_tmp.any():
+                                A = (
+                                        H * fdb.coeff
+                                        * len(L) * self.dim ** 2
+                                        * self.dim ** 2
+                                        * (dw ** 2).sum(dim=0)
+                                        * (tau_hi - tau_lo)
+                                        / (2 * tau)
+                                )[mask_tmp]
+                                if self.dim > 2:
+                                    A = A / (self.dim - 2)
+                                elif self.dim == 2:
+                                    A = -A * torch.log((dw[:, mask_tmp] ** 2).sum(dim=0).sqrt())
+                                tx = torch.cat((t.unsqueeze(0), x + dw), dim=0)[:, mask_tmp].requires_grad_(True)
+                                code_increment = np.zeros_like(code)
+                                code_increment[j] += 1
+                                if fdb.lamb[0] == 0:
+                                    A = A * self.nth_derivatives(
+                                        np.insert(code_increment, 0, 0), self(tx.T, patch=patch)[:, i], tx
+                                    )
+                                code_increment[j] -= 1
+                                code_increment[i] += 1
+                                if fdb.lamb[1] == 0:
+                                    A = A * self.nth_derivatives(
+                                        np.insert(code_increment, 0, 0), self(tx.T, patch=patch)[:, j], tx
+                                    )
+
+                                for ll, k_arr in fdb.l_and_k.items():
+                                    A = A * (self.nth_derivatives(
+                                        np.insert(code_increment + ll, 0, 0), self(tx.T, patch=patch)[:, j], tx
+                                    )) ** (k_arr[1])
+                                    code_increment[i] -= 1
+                                    code_increment[j] += 1
+                                    A = A * (self.nth_derivatives(
+                                        np.insert(code_increment + ll, 0, 0), self(tx.T, patch=patch)[:, i], tx
+                                    )) ** (k_arr[0])
+                                ans[mask_tmp] = A
+                            idx_counter += 1
+
+                        elif coordinate == -2:
+                            # coordinate -2 -> apply code to \partial_t p + beta * \Delta p
+                            for k in range(self.dim + 2):
+                                mask_tmp = mask.bool() * (idx == idx_counter)
+                                if mask_tmp.any():
+                                    A = (
+                                            H * fdb.coeff
+                                            * len(L) * self.dim ** 2 * (self.dim + 2)
+                                            * self.dim ** 2
+                                            * (dw ** 2).sum(dim=0)
+                                            * (tau_hi - tau_lo)
+                                            / (2 * tau)
+                                    )[mask_tmp]
+                                    if self.dim > 2:
+                                        A = A / (self.dim - 2)
+                                    elif self.dim == 2:
+                                        A = -A * torch.log((dw[:, mask_tmp] ** 2).sum(dim=0).sqrt())
+                                    tx = torch.cat((t.unsqueeze(0), x + dw), dim=0)[:, mask_tmp].requires_grad_(True)
+                                    code_increment = np.zeros_like(code)
+                                    if k < self.dim:
+                                        code_increment[k] += 1
+                                    elif k == self.dim + 1:
+                                        # the only difference between the last two k is the indexing of i, j
+                                        i, j = j, i
+                                    code_increment[j] += 1
+                                    if fdb.lamb[0] == 0:
+                                        A = A * self.nth_derivatives(
+                                            np.insert(code_increment, 0, 0), self(tx.T, patch=patch)[:, i], tx
+                                        )
+                                    code_increment[j] -= 1
+                                    code_increment[i] += 1
+                                    if fdb.lamb[1] == 0:
+                                        if k < self.dim:
+                                            A = A * self.nth_derivatives(
+                                                np.insert(code_increment, 0, 0), self(tx.T, patch=patch)[:, j], tx
+                                            )
+                                        else:
+                                            tmp = self.nth_derivatives(
+                                                np.insert(code_increment, 0, 1), self(tx.T, patch=patch)[:, j], tx
+                                            )
+                                            for ii in range(self.dim):
+                                                code_increment[ii] += 2  # Laplacian
+                                                tmp += self.beta * self.nth_derivatives(
+                                                    np.insert(code_increment, 0, 0), self(tx.T, patch=patch)[:, j], tx
+                                                )
+                                                code_increment[ii] -= 2
+                                            A = A * tmp
+
+                                    for ll, k_arr in fdb.l_and_k.items():
+                                        if k < self.dim:
+                                            A = A * (self.nth_derivatives(
+                                                np.insert(code_increment + ll, 0, 0), self(tx.T, patch=patch)[:, j], tx
+                                            )) ** (k_arr[1])
+                                        else:
+                                            tmp = self.nth_derivatives(
+                                                np.insert(code_increment + ll, 0, 1), self(tx.T, patch=patch)[:, j], tx
+                                            )
+                                            for ii in range(self.dim):
+                                                code_increment[ii] += 2  # Laplacian
+                                                tmp += self.beta * self.nth_derivatives(
+                                                    np.insert(code_increment + ll, 0, 0), self(tx.T, patch=patch)[:, j], x
+                                                )
+                                                code_increment[ii] -= 2
+                                            A = A * (tmp ** k_arr[1])
+                                        code_increment[i] -= 1
+                                        code_increment[j] += 1
+                                        A = A * (self.nth_derivatives(
+                                            np.insert(code_increment + ll, 0, 0), self(tx.T, patch=patch)[:, i], tx
+                                        )) ** (k_arr[0])
+                                    ans[mask_tmp] = A
+                                idx_counter += 1
+            return ans
+
+            # L = [fdb for fdb in fdb_nd(2, order) if max(fdb.lamb) < 2]
+            # idx_counter = 0
+            # if coordinate == -1:
+            #     idx = (unif * len(L) * self.dim ** 2).long()
+            #     for i in range(self.dim):
+            #         for j in range(self.dim):
+            #             for fdb in L:
+            #                 mask_tmp = mask.bool() * (idx == idx_counter)
+            #                 if mask_tmp.any():
+            #                     A = (
+            #                         H
+            #                         * fdb.coeff
+            #                         * len(L) * self.dim ** 2
+            #                         * (dw**2).sum(dim=0)
+            #                         * (tau_hi - tau_lo)
+            #                         / (2 * tau)
+            #                     )
+            #                     if self.dim > 2:
+            #                         A = A / (self.dim - 2)
+            #                     elif self.dim == 2:
+            #                         A = -A * torch.log((dw**2).sum(dim=0).sqrt())
+            #
+            #                     code_increment = np.zeros_like(code)
+            #                     code_increment[j] += 1
+            #                     if fdb.lamb[0] == 0:
+            #                         A = A * self.gen_sample_batch(
+            #                             t,
+            #                             T,
+            #                             x + dw,
+            #                             mask_tmp,
+            #                             torch.ones_like(t),
+            #                             -code_increment - 1,
+            #                             patch,
+            #                             i,
+            #                         )
+            #                     code_increment[j] -= 1
+            #                     code_increment[i] += 1
+            #                     if fdb.lamb[1] == 0:
+            #                         A = A * self.gen_sample_batch(
+            #                             t,
+            #                             T,
+            #                             x + dw,
+            #                             mask_tmp,
+            #                             torch.ones_like(t),
+            #                             -code_increment - 1,
+            #                             patch,
+            #                             j,
+            #                         )
+            #
+            #                     for ll, k_arr in fdb.l_and_k.items():
+            #                         code_increment[j] += 1
+            #                         for _ in range(k_arr[0]):
+            #                             A = A * self.gen_sample_batch(
+            #                                 t,
+            #                                 T,
+            #                                 x + dw,
+            #                                 mask_tmp,
+            #                                 torch.ones_like(t),
+            #                                 -code_increment - ll - 1,
+            #                                 patch,
+            #                                 i,
+            #                             )
+            #                         code_increment[j] -= 1
+            #                         code_increment[i] += 1
+            #                         for _ in range(k_arr[1]):
+            #                             A = A * self.gen_sample_batch(
+            #                                 t,
+            #                                 T,
+            #                                 x + dw,
+            #                                 mask_tmp,
+            #                                 torch.ones_like(t),
+            #                                 -code_increment - ll - 1,
+            #                                 patch,
+            #                                 j,
+            #                             )
+            #                     ans = ans.where(~mask_tmp, A)
+            #                 idx_counter += 1
+            #     return ans
+            #
+            # elif coordinate == -2:
+            #     idx = (unif * len(L) * self.dim ** 2 * (self.dim + 2)).long()
+            #     for i in range(self.dim):
+            #         for j in range(self.dim):
+            #             for k in range(self.dim + 2):
+            #                 for fdb in L:
+            #                     mask_tmp = mask.bool() * (idx == idx_counter)
+            #                     if mask_tmp.any():
+            #                         A = (
+            #                             H
+            #                             * fdb.coeff
+            #                             * len(L) * self.dim ** 2 * (self.dim + 2)
+            #                             * (dw**2).sum(dim=0)
+            #                             * (tau_hi - tau_lo)
+            #                             / (2 * tau)
+            #                          )
+            #                         if self.dim > 2:
+            #                             A = A / (self.dim - 2)
+            #                         elif self.dim == 2:
+            #                             A = -A * torch.log((dw**2).sum(dim=0).sqrt())
+            #
+            #                         if k < self.dim:
+            #                             A = 2 * self.beta * A
+            #                             code_increment = np.zeros_like(code)
+            #                             code_increment[k] += 1
+            #                             code_increment[j] += 1
+            #                             if fdb.lamb[0] == 0:
+            #                                 A = A * self.gen_sample_batch(
+            #                                     t,
+            #                                     T,
+            #                                     x + dw,
+            #                                     mask_tmp,
+            #                                     torch.ones_like(t),
+            #                                     -code_increment - 1,
+            #                                     patch,
+            #                                     i,
+            #                                 )
+            #                             code_increment[j] -= 1
+            #                             code_increment[i] += 1
+            #                             if fdb.lamb[1] == 0:
+            #                                 A = A * self.gen_sample_batch(
+            #                                     t,
+            #                                     T,
+            #                                     x + dw,
+            #                                     mask_tmp,
+            #                                     torch.ones_like(t),
+            #                                     -code_increment - 1,
+            #                                     patch,
+            #                                     j,
+            #                                     )
+            #
+            #                             for ll, k_arr in fdb.l_and_k.items():
+            #                                 code_increment[j] += 1
+            #                                 for _ in range(k_arr[0]):
+            #                                     A = A * self.gen_sample_batch(
+            #                                         t,
+            #                                         T,
+            #                                         x + dw,
+            #                                         mask_tmp,
+            #                                         torch.ones_like(t),
+            #                                         -code_increment - ll - 1,
+            #                                         patch,
+            #                                         i,
+            #                                         )
+            #                                 code_increment[j] -= 1
+            #                                 code_increment[i] += 1
+            #                                 for _ in range(k_arr[1]):
+            #                                     A = A * self.gen_sample_batch(
+            #                                         t,
+            #                                         T,
+            #                                         x + dw,
+            #                                         mask_tmp,
+            #                                         torch.ones_like(t),
+            #                                         -code_increment - ll - 1,
+            #                                         patch,
+            #                                         j,
+            #                                     )
+            #                         else:
+            #                             if k == self.dim - 1:
+            #                                 # the only difference between the last two iterations is the (i, j) index
+            #                                 i, j = j, i
+            #                             code_increment = np.zeros_like(code)
+            #                             code_increment[k] += 1
+            #                             code_increment[j] += 1
+            #                             if fdb.lamb[0] == 0:
+            #                                 A = A * self.gen_sample_batch(
+            #                                     t,
+            #                                     T,
+            #                                     x + dw,
+            #                                     mask_tmp,
+            #                                     torch.ones_like(t),
+            #                                     -code_increment - 1,
+            #                                     patch,
+            #                                     i,
+            #                                 )
+            #                             code_increment[j] -= 1
+            #                             code_increment[i] += 1
+            #                             if fdb.lamb[1] == 0:
+            #                                 A = A * self.gen_sample_batch(
+            #                                     t,
+            #                                     T,
+            #                                     x + dw,
+            #                                     mask_tmp,
+            #                                     torch.ones_like(t),
+            #                                     -code_increment - 1,
+            #                                     patch,
+            #                                     j,
+            #                                 )
+            #
+            #                             for ll, k_arr in fdb.l_and_k.items():
+            #                                 code_increment[j] += 1
+            #                                 for _ in range(k_arr[0]):
+            #                                     A = A * self.gen_sample_batch(
+            #                                         t,
+            #                                         T,
+            #                                         x + dw,
+            #                                         mask_tmp,
+            #                                         torch.ones_like(t),
+            #                                         -code_increment - ll - 1,
+            #                                         patch,
+            #                                         i,
+            #                                     )
+            #                                 code_increment[j] -= 1
+            #                                 code_increment[i] += 1
+            #                                 for _ in range(k_arr[1]):
+            #                                     A = A * self.gen_sample_batch(
+            #                                         t,
+            #                                         T,
+            #                                         x + dw,
+            #                                         mask_tmp,
+            #                                         torch.ones_like(t),
+            #                                         -code_increment - ll - 1,
+            #                                         patch,
+            #                                         j,
+            #                                     )
+            #                         ans = ans.where(~mask_tmp, A)
+            #                     idx_counter += 1
+            #     return ans
+
         if coordinate < 0:
             # coordinate -1 -> apply code to p
             # coordinate -2 -> apply code to \partial_t p + beta * \Delta p
@@ -519,7 +873,6 @@ class Net(torch.nn.Module):
             ans[mask_now] = tmp
             return ans
 
-        nb_states, _ = t.shape
         tau = Exponential(
             self.exponential_lambda
             * torch.ones(nb_states, self.nb_path_per_state, device=self.device)
@@ -815,7 +1168,7 @@ class Net(torch.nn.Module):
                     c,
                     patch,
                     idx,
-                )
+                ).detach()
                 if discard_outlier:
                     # let (lo, hi) be
                     # (self.outlier_percentile, 100 - self.outlier_percentile)
@@ -862,30 +1215,36 @@ class Net(torch.nn.Module):
             for epoch in range(self.epochs):
                 # clear gradients and evaluate training loss
                 optimizer.zero_grad()
-                start = time.time()
-                # the running statistics for p is very different from time to time, so we do not track them
-                self.eval()
-                x, y = self.gen_sample(
-                    patch=p,
-                    coordinate=np.array(range(self.dim)),
-                    code=-np.ones((self.dim, self.dim), dtype=int),
-                    discard_outlier=True,
-                )
+                if epoch % 100 == 0:
+                    # the running statistics for p is very different from time to time, so we do not track them
+                    self.eval()
+                    start = time.time()
+                    logging.info(f"Generating new samples at epoch {epoch:3.0f}.")
+                    x, y = self.gen_sample(
+                        patch=p,
+                        coordinate=np.array(range(self.dim)),
+                        code=-np.ones((self.dim, self.dim), dtype=int),
+                        discard_outlier=True,
+                    )
+                    logging.info(
+                        f"Sample generation takes {time.time() - start:4.0f} seconds."
+                    )
                 self.train()
+                start = time.time()
                 predict = self(x, patch=p)
                 x_lo = torch.tensor([self.t_lo] + [self.x_lo] * self.dim, device=self.device)
                 x_hi = torch.tensor([self.T] + [self.x_hi] * self.dim, device=self.device)
                 states_per_batch = 100000
                 unif = (
-                    torch.rand((self.dim + 1) * states_per_batch, device=self.device, requires_grad=True)
-                         .reshape(states_per_batch, self.dim + 1)
+                    torch.rand((self.dim + 1) * self.nb_states, device=self.device, requires_grad=True)
+                         .reshape(self.nb_states, self.dim + 1)
                 )
-                x = (x_lo + (x_hi - x_lo) * unif).T
+                xx = (x_lo + (x_hi - x_lo) * unif).T
                 grad = 0
                 for (idx, c) in zip(self.deriv_condition_zeta_map, self.deriv_condition_deriv_map):
                     # additional t coordinate
                     grad += self.nth_derivatives(
-                        np.insert(c, 0, 0), self(x.T, patch=p)[:, idx], x
+                        np.insert(c, 0, 0), self(xx.T, patch=p)[:, idx], x
                     )
                 loss = self.loss(y, predict) + self.deriv_condition_coeff * self.loss(grad, torch.zeros_like(grad))
 
@@ -896,19 +1255,19 @@ class Net(torch.nn.Module):
                     for i in range(self.dim):
                         order[i + 1] += 2
                         poisson_lhs += self.nth_derivatives(
-                            order, self(x.T, p_or_u="p", patch=p), x
+                            order, self(xx.T, p_or_u="p", patch=p), x
                         )
                         order[i + 1] -= 2
                     for i in range(self.dim):
                         for j in range(self.dim):
                             order[i + 1] += 1
                             tmp = self.nth_derivatives(
-                                order, self(x.T, patch=p)[:, j], x
+                                order, self(xx.T, patch=p)[:, j], x
                             )
                             order[i + 1] -= 1
                             order[j + 1] += 1
                             tmp *= self.nth_derivatives(
-                                order, self(x.T, patch=p)[:, i], x
+                                order, self(xx.T, patch=p)[:, i], x
                             )
                             order[j + 1] -= 1
                             poisson_rhs -= tmp
