@@ -246,16 +246,6 @@ class Net(torch.nn.Module):
             else:
                 return torch.stack([self.exact_u_fun(x, i) for i in range(self.dim)], dim=-1)
 
-        # if p_or_u == "p":
-        #     # get p from u using inverse Laplacian for the MC integration
-        #     # this requires a lot of memory
-        #     return self.calculate_p_from_u(x)
-
-        # normalization to make sure x is roughly within the range of [0, 1] x (dim + 1)
-        x_lo = torch.tensor([self.t_lo] + [self.x_lo] * self.dim, device=self.device)
-        x_hi = torch.tensor([self.T] + [self.x_hi] * self.dim, device=self.device)
-        x = (x - x_lo) / (x_hi - x_lo)
-
         if patch is not None:
             y = x
             if self.batch_normalization:
@@ -460,7 +450,49 @@ class Net(torch.nn.Module):
             normal = torch.randn(
                 self.dim, nb_states, self.nb_path_per_state, device=self.device
             )
-        return torch.sqrt(2 * self.beta * dt) * normal
+        return torch.sqrt(var * dt) * normal
+
+    def helper_negative_code_on_f(self, t, T, x, mask, H, code, patch, coordinate):
+        ans = torch.zeros_like(t)
+        order = tuple(-code - 1)
+        # if c is not in the lookup, add it
+        if order not in self.fdb_lookup.keys():
+            start = time.time()
+            self.fdb_lookup[order] = fdb_nd(self.n, order)
+            self.fdb_runtime += time.time() - start
+        L = self.fdb_lookup[order]
+        unif = torch.rand(t.shape[0], self.nb_path_per_state, device=self.device)
+        idx = (unif * len(L)).long()
+        idx_counter = 0
+        for fdb in self.fdb_lookup[order]:
+            mask_tmp = mask * (idx == idx_counter)
+            if mask_tmp.any():
+                A = self.gen_sample_batch(
+                    t,
+                    T,
+                    x,
+                    mask_tmp,
+                    fdb.coeff * len(L) * H,
+                    np.array(fdb.lamb) + 1,
+                    patch,
+                    coordinate,
+                )
+                for ll, k_arr in fdb.l_and_k.items():
+                    for q in range(self.n):
+                        for _ in range(k_arr[q]):
+                            A = A * self.gen_sample_batch(
+                                t,
+                                T,
+                                x,
+                                mask_tmp,
+                                torch.ones_like(t),
+                                -self.deriv_map[q] - ll - 1,
+                                patch,
+                                self.zeta_map[q],
+                            )
+                ans = ans.where(~mask_tmp, A)
+            idx_counter += 1
+        return ans
 
     def gen_sample_batch(self, t, T, x, mask, H, code, patch, coordinate):
         """
@@ -488,7 +520,6 @@ class Net(torch.nn.Module):
         nb_states, _ = t.shape
 
         if coordinate < 0:
-            # seems to work now.... double check again and move to -2 coordinate
             unif = (
                 torch.rand(nb_states * self.nb_path_per_state, device=self.device)
                      .reshape(nb_states, self.nb_path_per_state)
@@ -516,35 +547,64 @@ class Net(torch.nn.Module):
                                         * (dw ** 2).sum(dim=0)
                                         * (self.tau_hi - self.tau_lo)
                                         / (2 * tau)
-                                )[mask_tmp]
+                                )
                                 if self.dim > 2:
                                     A = A / (self.dim - 2)
                                 elif self.dim == 2:
-                                    A = -A * torch.log((dw[:, mask_tmp] ** 2).sum(dim=0).sqrt())
-                                tx = torch.cat((t.unsqueeze(0), x + dw), dim=0)[:, mask_tmp].requires_grad_(True)
+                                    A = -A * torch.log((dw ** 2).sum(dim=0).sqrt())
                                 code_increment = np.zeros_like(code)
                                 code_increment[j] += 1
                                 if fdb.lamb[0] == 0:
-                                    A = A * self.nth_derivatives(
-                                        np.insert(code_increment, 0, 0), self(tx.T, patch=patch)[:, i], tx
+                                    A = A * self.gen_sample_batch(
+                                        t,
+                                        T,
+                                        x + dw,
+                                        mask_tmp,
+                                        torch.ones_like(t),
+                                        -code_increment - 1,
+                                        patch,
+                                        i,
                                     )
                                 code_increment[j] -= 1
                                 code_increment[i] += 1
                                 if fdb.lamb[1] == 0:
-                                    A = A * self.nth_derivatives(
-                                        np.insert(code_increment, 0, 0), self(tx.T, patch=patch)[:, j], tx
+                                    A = A * self.gen_sample_batch(
+                                        t,
+                                        T,
+                                        x + dw,
+                                        mask_tmp,
+                                        torch.ones_like(t),
+                                        -code_increment - 1,
+                                        patch,
+                                        j,
                                     )
 
                                 for ll, k_arr in fdb.l_and_k.items():
-                                    A = A * (self.nth_derivatives(
-                                        np.insert(code_increment + ll, 0, 0), self(tx.T, patch=patch)[:, j], tx
-                                    )) ** (k_arr[1])
+                                    for _ in range(k_arr[1]):
+                                        A = A * self.gen_sample_batch(
+                                            t,
+                                            T,
+                                            x + dw,
+                                            mask_tmp,
+                                            torch.ones_like(t),
+                                            -code_increment - ll - 1,
+                                            patch,
+                                            j,
+                                        )
                                     code_increment[i] -= 1
                                     code_increment[j] += 1
-                                    A = A * (self.nth_derivatives(
-                                        np.insert(code_increment + ll, 0, 0), self(tx.T, patch=patch)[:, i], tx
-                                    )) ** (k_arr[0])
-                                ans[mask_tmp] = A
+                                    for _ in range(k_arr[0]):
+                                        A = A * self.gen_sample_batch(
+                                            t,
+                                            T,
+                                            x + dw,
+                                            mask_tmp,
+                                            torch.ones_like(t),
+                                            -code_increment - ll - 1,
+                                            patch,
+                                            i,
+                                        )
+                                ans = ans.where(~mask_tmp, A)
                             idx_counter += 1
 
                         elif coordinate == -2:
@@ -559,294 +619,96 @@ class Net(torch.nn.Module):
                                             * (dw ** 2).sum(dim=0)
                                             * (self.tau_hi - self.tau_lo)
                                             / (2 * tau)
-                                    )[mask_tmp]
+                                    )
                                     if self.dim > 2:
                                         A = A / (self.dim - 2)
                                     elif self.dim == 2:
-                                        A = -A * torch.log((dw[:, mask_tmp] ** 2).sum(dim=0).sqrt())
-                                    tx = torch.cat((t.unsqueeze(0), x + dw), dim=0)[:, mask_tmp].requires_grad_(True)
+                                        A = -A * torch.log((dw ** 2).sum(dim=0).sqrt())
                                     code_increment = np.zeros_like(code)
                                     if k < self.dim:
+                                        A = 2 * self.beta * A
                                         code_increment[k] += 1
                                     elif k == self.dim + 1:
                                         # the only difference between the last two k is the indexing of i, j
                                         i, j = j, i
                                     code_increment[j] += 1
                                     if fdb.lamb[0] == 0:
-                                        A = A * self.nth_derivatives(
-                                            np.insert(code_increment, 0, 0), self(tx.T, patch=patch)[:, i], tx
+                                        A = A * self.gen_sample_batch(
+                                            t,
+                                            T,
+                                            x + dw,
+                                            mask_tmp,
+                                            torch.ones_like(t),
+                                            -code_increment - 1,
+                                            patch,
+                                            i,
                                         )
                                     code_increment[j] -= 1
                                     code_increment[i] += 1
                                     if fdb.lamb[1] == 0:
                                         if k < self.dim:
-                                            A = A * self.nth_derivatives(
-                                                np.insert(code_increment, 0, 0), self(tx.T, patch=patch)[:, j], tx
+                                            A = A * self.gen_sample_batch(
+                                                t,
+                                                T,
+                                                x + dw,
+                                                mask_tmp,
+                                                torch.ones_like(t),
+                                                -code_increment - 1,
+                                                patch,
+                                                j,
                                             )
                                         else:
-                                            tmp = self.nth_derivatives(
-                                                np.insert(code_increment, 0, 1), self(tx.T, patch=patch)[:, j], tx
+                                            A = A * self.helper_negative_code_on_f(
+                                                t,
+                                                T,
+                                                x + dw,
+                                                mask_tmp,
+                                                -torch.ones_like(t),
+                                                -code_increment - 1,
+                                                patch,
+                                                j,
                                             )
-                                            for ii in range(self.dim):
-                                                code_increment[ii] += 2  # Laplacian
-                                                tmp += self.beta * self.nth_derivatives(
-                                                    np.insert(code_increment, 0, 0), self(tx.T, patch=patch)[:, j], tx
-                                                )
-                                                code_increment[ii] -= 2
-                                            A = A * tmp
 
                                     for ll, k_arr in fdb.l_and_k.items():
                                         if k < self.dim:
-                                            A = A * (self.nth_derivatives(
-                                                np.insert(code_increment + ll, 0, 0), self(tx.T, patch=patch)[:, j], tx
-                                            )) ** (k_arr[1])
-                                        else:
-                                            tmp = self.nth_derivatives(
-                                                np.insert(code_increment + ll, 0, 1), self(tx.T, patch=patch)[:, j], tx
-                                            )
-                                            for ii in range(self.dim):
-                                                code_increment[ii] += 2  # Laplacian
-                                                tmp += self.beta * self.nth_derivatives(
-                                                    np.insert(code_increment + ll, 0, 0), self(tx.T, patch=patch)[:, j], x
+                                            for _ in range(k_arr[1]):
+                                                A = A * self.gen_sample_batch(
+                                                    t,
+                                                    T,
+                                                    x + dw,
+                                                    mask_tmp,
+                                                    torch.ones_like(t),
+                                                    -code_increment - ll - 1,
+                                                    patch,
+                                                    j,
                                                 )
-                                                code_increment[ii] -= 2
-                                            A = A * (tmp ** k_arr[1])
+                                        else:
+                                            for _ in range(k_arr[1]):
+                                                A = A * self.helper_negative_code_on_f(
+                                                    t,
+                                                    T,
+                                                    x + dw,
+                                                    mask_tmp,
+                                                    -torch.ones_like(t),
+                                                    -code_increment - ll - 1,
+                                                    patch,
+                                                    j,
+                                                )
                                         code_increment[i] -= 1
                                         code_increment[j] += 1
-                                        A = A * (self.nth_derivatives(
-                                            np.insert(code_increment + ll, 0, 0), self(tx.T, patch=patch)[:, i], tx
-                                        )) ** (k_arr[0])
-                                    ans[mask_tmp] = A
+                                        for _ in range(k_arr[0]):
+                                            A = A * self.gen_sample_batch(
+                                                t,
+                                                T,
+                                                x + dw,
+                                                mask_tmp,
+                                                torch.ones_like(t),
+                                                -code_increment - ll - 1,
+                                                patch,
+                                                i,
+                                            )
+                                    ans = ans.where(~mask_tmp, A)
                                 idx_counter += 1
-            return ans
-
-            # L = [fdb for fdb in fdb_nd(2, order) if max(fdb.lamb) < 2]
-            # idx_counter = 0
-            # if coordinate == -1:
-            #     idx = (unif * len(L) * self.dim ** 2).long()
-            #     for i in range(self.dim):
-            #         for j in range(self.dim):
-            #             for fdb in L:
-            #                 mask_tmp = mask.bool() * (idx == idx_counter)
-            #                 if mask_tmp.any():
-            #                     A = (
-            #                         H
-            #                         * fdb.coeff
-            #                         * len(L) * self.dim ** 2
-            #                         * (dw**2).sum(dim=0)
-            #                         * (tau_hi - tau_lo)
-            #                         / (2 * tau)
-            #                     )
-            #                     if self.dim > 2:
-            #                         A = A / (self.dim - 2)
-            #                     elif self.dim == 2:
-            #                         A = -A * torch.log((dw**2).sum(dim=0).sqrt())
-            #
-            #                     code_increment = np.zeros_like(code)
-            #                     code_increment[j] += 1
-            #                     if fdb.lamb[0] == 0:
-            #                         A = A * self.gen_sample_batch(
-            #                             t,
-            #                             T,
-            #                             x + dw,
-            #                             mask_tmp,
-            #                             torch.ones_like(t),
-            #                             -code_increment - 1,
-            #                             patch,
-            #                             i,
-            #                         )
-            #                     code_increment[j] -= 1
-            #                     code_increment[i] += 1
-            #                     if fdb.lamb[1] == 0:
-            #                         A = A * self.gen_sample_batch(
-            #                             t,
-            #                             T,
-            #                             x + dw,
-            #                             mask_tmp,
-            #                             torch.ones_like(t),
-            #                             -code_increment - 1,
-            #                             patch,
-            #                             j,
-            #                         )
-            #
-            #                     for ll, k_arr in fdb.l_and_k.items():
-            #                         code_increment[j] += 1
-            #                         for _ in range(k_arr[0]):
-            #                             A = A * self.gen_sample_batch(
-            #                                 t,
-            #                                 T,
-            #                                 x + dw,
-            #                                 mask_tmp,
-            #                                 torch.ones_like(t),
-            #                                 -code_increment - ll - 1,
-            #                                 patch,
-            #                                 i,
-            #                             )
-            #                         code_increment[j] -= 1
-            #                         code_increment[i] += 1
-            #                         for _ in range(k_arr[1]):
-            #                             A = A * self.gen_sample_batch(
-            #                                 t,
-            #                                 T,
-            #                                 x + dw,
-            #                                 mask_tmp,
-            #                                 torch.ones_like(t),
-            #                                 -code_increment - ll - 1,
-            #                                 patch,
-            #                                 j,
-            #                             )
-            #                     ans = ans.where(~mask_tmp, A)
-            #                 idx_counter += 1
-            #     return ans
-            #
-            # elif coordinate == -2:
-            #     idx = (unif * len(L) * self.dim ** 2 * (self.dim + 2)).long()
-            #     for i in range(self.dim):
-            #         for j in range(self.dim):
-            #             for k in range(self.dim + 2):
-            #                 for fdb in L:
-            #                     mask_tmp = mask.bool() * (idx == idx_counter)
-            #                     if mask_tmp.any():
-            #                         A = (
-            #                             H
-            #                             * fdb.coeff
-            #                             * len(L) * self.dim ** 2 * (self.dim + 2)
-            #                             * (dw**2).sum(dim=0)
-            #                             * (tau_hi - tau_lo)
-            #                             / (2 * tau)
-            #                          )
-            #                         if self.dim > 2:
-            #                             A = A / (self.dim - 2)
-            #                         elif self.dim == 2:
-            #                             A = -A * torch.log((dw**2).sum(dim=0).sqrt())
-            #
-            #                         if k < self.dim:
-            #                             A = 2 * self.beta * A
-            #                             code_increment = np.zeros_like(code)
-            #                             code_increment[k] += 1
-            #                             code_increment[j] += 1
-            #                             if fdb.lamb[0] == 0:
-            #                                 A = A * self.gen_sample_batch(
-            #                                     t,
-            #                                     T,
-            #                                     x + dw,
-            #                                     mask_tmp,
-            #                                     torch.ones_like(t),
-            #                                     -code_increment - 1,
-            #                                     patch,
-            #                                     i,
-            #                                 )
-            #                             code_increment[j] -= 1
-            #                             code_increment[i] += 1
-            #                             if fdb.lamb[1] == 0:
-            #                                 A = A * self.gen_sample_batch(
-            #                                     t,
-            #                                     T,
-            #                                     x + dw,
-            #                                     mask_tmp,
-            #                                     torch.ones_like(t),
-            #                                     -code_increment - 1,
-            #                                     patch,
-            #                                     j,
-            #                                     )
-            #
-            #                             for ll, k_arr in fdb.l_and_k.items():
-            #                                 code_increment[j] += 1
-            #                                 for _ in range(k_arr[0]):
-            #                                     A = A * self.gen_sample_batch(
-            #                                         t,
-            #                                         T,
-            #                                         x + dw,
-            #                                         mask_tmp,
-            #                                         torch.ones_like(t),
-            #                                         -code_increment - ll - 1,
-            #                                         patch,
-            #                                         i,
-            #                                         )
-            #                                 code_increment[j] -= 1
-            #                                 code_increment[i] += 1
-            #                                 for _ in range(k_arr[1]):
-            #                                     A = A * self.gen_sample_batch(
-            #                                         t,
-            #                                         T,
-            #                                         x + dw,
-            #                                         mask_tmp,
-            #                                         torch.ones_like(t),
-            #                                         -code_increment - ll - 1,
-            #                                         patch,
-            #                                         j,
-            #                                     )
-            #                         else:
-            #                             if k == self.dim - 1:
-            #                                 # the only difference between the last two iterations is the (i, j) index
-            #                                 i, j = j, i
-            #                             code_increment = np.zeros_like(code)
-            #                             code_increment[k] += 1
-            #                             code_increment[j] += 1
-            #                             if fdb.lamb[0] == 0:
-            #                                 A = A * self.gen_sample_batch(
-            #                                     t,
-            #                                     T,
-            #                                     x + dw,
-            #                                     mask_tmp,
-            #                                     torch.ones_like(t),
-            #                                     -code_increment - 1,
-            #                                     patch,
-            #                                     i,
-            #                                 )
-            #                             code_increment[j] -= 1
-            #                             code_increment[i] += 1
-            #                             if fdb.lamb[1] == 0:
-            #                                 A = A * self.gen_sample_batch(
-            #                                     t,
-            #                                     T,
-            #                                     x + dw,
-            #                                     mask_tmp,
-            #                                     torch.ones_like(t),
-            #                                     -code_increment - 1,
-            #                                     patch,
-            #                                     j,
-            #                                 )
-            #
-            #                             for ll, k_arr in fdb.l_and_k.items():
-            #                                 code_increment[j] += 1
-            #                                 for _ in range(k_arr[0]):
-            #                                     A = A * self.gen_sample_batch(
-            #                                         t,
-            #                                         T,
-            #                                         x + dw,
-            #                                         mask_tmp,
-            #                                         torch.ones_like(t),
-            #                                         -code_increment - ll - 1,
-            #                                         patch,
-            #                                         i,
-            #                                     )
-            #                                 code_increment[j] -= 1
-            #                                 code_increment[i] += 1
-            #                                 for _ in range(k_arr[1]):
-            #                                     A = A * self.gen_sample_batch(
-            #                                         t,
-            #                                         T,
-            #                                         x + dw,
-            #                                         mask_tmp,
-            #                                         torch.ones_like(t),
-            #                                         -code_increment - ll - 1,
-            #                                         patch,
-            #                                         j,
-            #                                     )
-            #                         ans = ans.where(~mask_tmp, A)
-            #                     idx_counter += 1
-            #     return ans
-
-        if coordinate < 0:
-            # coordinate -1 -> apply code to p
-            # coordinate -2 -> apply code to \partial_t p + beta * \Delta p
-            mask_now = mask.bool()
-            tx = torch.cat((t.unsqueeze(0), x), dim=0)
-            tmp = H[mask_now] * self.code_to_function(
-                code, tx[:, mask_now], T[mask_now], coordinate, patch
-            )
-            ans[mask_now] = tmp
             return ans
 
         tau = Exponential(
@@ -926,23 +788,7 @@ class Net(torch.nn.Module):
                     )
 
                     for ll, k_arr in fdb.l_and_k.items():
-                        for q in range(self.nprime):
-                            # for p, specially split into two loops to avoid applying code to p "k_arr[q]" times
-                            A = (
-                                A
-                                * self.gen_sample_batch(
-                                    t + tau,
-                                    T,
-                                    x + dw,
-                                    mask_tmp,
-                                    torch.ones_like(t),
-                                    -self.deriv_map[q] - ll - 1,
-                                    patch,
-                                    self.zeta_map[q],
-                                )
-                                ** k_arr[q]
-                            )
-                        for q in range(self.nprime, self.n):
+                        for q in range(self.n):
                             # for u
                             for _ in range(k_arr[q]):
                                 A = A * self.gen_sample_batch(
