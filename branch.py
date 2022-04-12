@@ -163,7 +163,7 @@ class Net(torch.nn.Module):
             x_hi + overtrain_rate * (x_hi - x_lo),
         )
         self.t_lo = t_lo
-        self.t_hi = t_hi
+        self.t_hi = t_lo if fix_all_dim_except_first else t_hi
         self.T = T
         self.beta = beta
         self.delta_t = (T - t_lo) / branch_patches
@@ -365,10 +365,11 @@ class Net(torch.nn.Module):
             for _ in range(int(cur_order)):
                 try:
                     grads = torch.autograd.grad(y.sum(), x, create_graph=True)[0]
-                except RuntimeError:
+                except RuntimeError as e:
                     # when very high order derivatives are taken for polynomial function
                     # it has 0 gradient but torch has difficulty knowing that
                     # hence we handle such error separately
+                    # logging.debug(e)
                     return torch.zeros_like(y)
 
                 # update y
@@ -1137,7 +1138,8 @@ class Net(torch.nn.Module):
         t_hi = min(self.t_hi, t_hi)
         x_lo, x_hi = self.adjusted_x_boundaries
         xx, yy = [], []
-        for _ in range(batches):
+        for batch_now in range(batches):
+            start = time.time()
             unif = (
                 torch.rand(states_per_batch, device=self.device)
                 .repeat(self.nb_path_per_state)
@@ -1190,6 +1192,7 @@ class Net(torch.nn.Module):
                     mask = ~yy_tmp.isnan()
                 yyy.append((yy_tmp.nan_to_num() * mask).sum(dim=1) / mask.sum(dim=1))
             yy.append(torch.stack(yyy, dim=-1))
+            logging.info(f"Generated {batch_now + 1} out of {batches} batches with {time.time() - start} seconds.")
 
         return (
             torch.cat(xx, dim=0),
@@ -1289,8 +1292,8 @@ class Net(torch.nn.Module):
 
                 self.eval()
                 grid = np.linspace(self.x_lo, self.x_hi, 100)
-                x_mid = (self.x_lo + self.x_hi) / 2
-                t_lo = self.T / 2
+                x_mid = x[0, 2].item() if self.fix_all_dim_except_first else (self.x_lo + self.x_hi) / 2
+                t_lo = x[0, 0].item() if self.fix_all_dim_except_first else self.T / 2
                 grid_nd = np.concatenate(
                     (
                         t_lo * np.ones((1, 100)),
@@ -1335,6 +1338,8 @@ class Net(torch.nn.Module):
                         .cpu()
                     )
                     fig = plt.figure()
+                    if self.fix_all_dim_except_first:
+                        plt.plot(x.detach().cpu()[:, 1], y.detach().cpu()[:, i], '+', label="MC samples")
                     plt.plot(grid, nn[:, i], label=f"NN")
                     plt.plot(grid, exact, label=f"exact")
                     plt.title(f"Epoch {epoch:04}")
