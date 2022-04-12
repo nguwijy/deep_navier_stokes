@@ -117,7 +117,7 @@ class Net(torch.nn.Module):
         self.p_layer = torch.nn.ModuleList(
             [
                 torch.nn.ModuleList(
-                    [torch.nn.Linear(self.dim + 1, neurons, device=device)]
+                    [torch.nn.Linear(self.dim, neurons, device=device)]
                     + [
                         torch.nn.Linear(neurons, neurons, device=device)
                         for _ in range(layers)
@@ -130,7 +130,7 @@ class Net(torch.nn.Module):
         self.p_bn_layer = torch.nn.ModuleList(
             [
                 torch.nn.ModuleList(
-                    [torch.nn.BatchNorm1d(self.dim + 1, device=device)]
+                    [torch.nn.BatchNorm1d(self.dim, device=device)]
                     + [
                         torch.nn.BatchNorm1d(neurons, device=device)
                         for _ in range(layers + 1)
@@ -165,6 +165,7 @@ class Net(torch.nn.Module):
         self.t_lo = t_lo
         self.t_hi = t_lo if fix_all_dim_except_first else t_hi
         self.T = T
+        self.tau_lo, self.tau_hi = 1e-5, 6  # for negative coordinate
         self.beta = beta
         self.delta_t = (T - t_lo) / branch_patches
         self.outlier_percentile = outlier_percentile
@@ -194,33 +195,33 @@ class Net(torch.nn.Module):
         self.log_config()
 
     def calculate_p_from_u(self, x):
-        nb_mc = 1000
+        x = x.detach().clone().requires_grad_(True)
+        nb_mc = self.nb_path_per_state
         x = x.repeat(nb_mc, 1, 1)
-        tau_lo, tau_hi = 1e-5, 6
         unif = (
             torch.rand(nb_mc * x.shape[1], device=self.device)
                  .reshape(nb_mc, -1, 1)
         )
-        tau = tau_lo + (tau_hi - tau_lo) * unif
+        tau = self.tau_lo + (self.tau_hi - self.tau_lo) * unif
         y = torch.sqrt(tau) * torch.randn(
                 nb_mc, x.shape[1], self.dim, device=self.device
             )
-        x = x + torch.cat((torch.zeros_like(y[:, :, :1]), y), dim=-1)
-        x = x.reshape(-1, dim + 1).T
-        order = np.array([0] * (self.dim + 1))
+        x = x + y
+        x = x.reshape(-1, self.dim).T
+        order = np.array([0] * self.dim)
         ans = 0
         for i in range(self.dim):
             for j in range(self.dim):
-                order[i + 1] += 1
+                order[i] += 1
                 tmp = self.nth_derivatives(
-                    order, self(x.T, patch=0)[:, j], x
+                    order, self.phi_fun(x, j), x
                 )
-                order[i + 1] -= 1
-                order[j + 1] += 1
+                order[i] -= 1
+                order[j] += 1
                 tmp *= self.nth_derivatives(
-                    order, self(x.T, patch=0)[:, i], x
+                    order, self.phi_fun(x, i), x
                 )
-                order[j + 1] -= 1
+                order[j] -= 1
                 ans += tmp
         ans = ans.reshape(nb_mc, -1)
         ans *= (y**2).sum(dim=-1)
@@ -228,8 +229,8 @@ class Net(torch.nn.Module):
             ans /= (self.dim - 2)
         elif self.dim == 2:
             ans *= -torch.log((y**2).sum(dim=-1).sqrt())
-        ans *= ((tau_hi - tau_lo) / (2 * tau[:, :, 0]))
-        return ans.mean(dim=0)
+        ans *= ((self.tau_hi - self.tau_lo) / (2 * tau[:, :, 0]))
+        return ans.mean(dim=0).detach()
 
     def forward(self, x, patch=None, p_or_u="u"):
         """
@@ -405,32 +406,7 @@ class Net(torch.nn.Module):
         shape of output -> batch
         """
         x = x.detach().clone().requires_grad_(True)
-        tx = torch.cat((T.unsqueeze(0), x), dim=0).detach().clone().requires_grad_(True)
         fun_val = torch.zeros_like(x[0])
-
-        if coordinate == -1:
-            # coordinate -1 -> apply code to p
-            order = -code - 1
-            order = np.insert(order, 0, 0)  # p has additionally t coordinate
-            return self.nth_derivatives(
-                order, self(x.T, p_or_u="p", patch=patch), x
-            )
-
-        if coordinate == -2:
-            # coordinate -2 -> apply code to \partial_t p + beta * \Delta p
-            order = -code - 1
-            order = np.insert(order, 0, 1)  # p has additionally t coordinate
-            ans = self.nth_derivatives(
-                order, self(x.T, p_or_u="p", patch=patch), x
-            )
-            order[0] -= 1
-            for i in range(self.dim):
-                order[i + 1] += 2  # Laplacian
-                ans += self.beta * self.nth_derivatives(
-                    order, self(x.T, p_or_u="p", patch=patch), x
-                )
-                order[i + 1] -= 2
-            return ans
 
         # negative code of size d
         if code[0] < 0:
@@ -443,10 +419,9 @@ class Net(torch.nn.Module):
             y = []
             for idx, order in enumerate(self.deriv_map):
                 if self.zeta_map[idx] < 0:
-                    # p has additionally t coordinate
                     y.append(
                         self.nth_derivatives(
-                            np.insert(order, 0, 0), self(tx.T, p_or_u="p", patch=patch), tx
+                            order, self(x.T, p_or_u="p", patch=patch), x
                         )
                     )
                 else:
@@ -459,11 +434,11 @@ class Net(torch.nn.Module):
 
             return self.nth_derivatives(
                 code - 1, self.f_fun(y, coordinate), y
-            )
+            ).detach()
 
-        return fun_val
+        return fun_val.detach()
 
-    def gen_bm(self, dt, nb_states):
+    def gen_bm(self, dt, nb_states, var=None):
         """
         generate brownian motion sqrt{dt} x Gaussian
 
@@ -471,6 +446,7 @@ class Net(torch.nn.Module):
         dw = sqrt{dt} x Gaussian of size nb_states//2
         and return (dw, -dw)
         """
+        var = 2 * self.beta if var is None else var
         dt = dt.clip(min=0.0)  # so that we can safely take square root of dt
 
         if self.antithetic:
@@ -510,7 +486,6 @@ class Net(torch.nn.Module):
             return ans
 
         nb_states, _ = t.shape
-        tau_lo, tau_hi = 1e-5, 6  # for negative coordinate
 
         if coordinate < 0:
             # seems to work now.... double check again and move to -2 coordinate
@@ -518,8 +493,8 @@ class Net(torch.nn.Module):
                 torch.rand(nb_states * self.nb_path_per_state, device=self.device)
                      .reshape(nb_states, self.nb_path_per_state)
             )
-            tau = tau_lo + (tau_hi - tau_lo) * unif
-            dw = self.gen_bm(tau, nb_states)
+            tau = self.tau_lo + (self.tau_hi - self.tau_lo) * unif
+            dw = self.gen_bm(tau, nb_states, var=1)
             unif = torch.rand(nb_states, self.nb_path_per_state, device=self.device)
             order = -code - 1
             L = [fdb for fdb in fdb_nd(2, order) if max(fdb.lamb) < 2]
@@ -539,7 +514,7 @@ class Net(torch.nn.Module):
                                         * len(L) * self.dim ** 2
                                         * self.dim ** 2
                                         * (dw ** 2).sum(dim=0)
-                                        * (tau_hi - tau_lo)
+                                        * (self.tau_hi - self.tau_lo)
                                         / (2 * tau)
                                 )[mask_tmp]
                                 if self.dim > 2:
@@ -582,7 +557,7 @@ class Net(torch.nn.Module):
                                             * len(L) * self.dim ** 2 * (self.dim + 2)
                                             * self.dim ** 2
                                             * (dw ** 2).sum(dim=0)
-                                            * (tau_hi - tau_lo)
+                                            * (self.tau_hi - self.tau_lo)
                                             / (2 * tau)
                                     )[mask_tmp]
                                     if self.dim > 2:
@@ -1199,6 +1174,29 @@ class Net(torch.nn.Module):
             torch.cat(yy, dim=0),
         )
 
+    def gen_sample_for_p(self):
+        states_per_batch = min(self.nb_states, self.nb_states_per_batch)
+        batches = math.ceil(self.nb_states / states_per_batch)
+        xx, yy = [], []
+        # widen the domain from [x_lo, x_hi] to [x_lo - .5*(x_hi-x_lo), x_hi + .5*(x_hi-x_lo)]
+        x_lo, x_hi = self.x_lo, self.x_hi
+        x_lo, x_hi = x_lo - .5*(x_hi-x_lo), x_hi + .5*(x_hi-x_lo)
+        for _ in range(batches):
+            unif = (
+                torch.rand(self.dim * states_per_batch, device=self.device)
+                     .reshape(states_per_batch, self.dim)
+            )
+            x = (x_lo + (x_hi - x_lo) * unif).T
+            if self.dim > 1 and self.fix_all_dim_except_first:
+                x[1:, :] = (x_hi + x_lo) / 2
+            y = self.calculate_p_from_u(x.T)
+            xx.append(x)
+            yy.append(y)
+        return (
+            torch.cat(xx, dim=-1),
+            torch.cat(yy, dim=-1),
+        )
+
     def train_and_eval(self, debug_mode=False):
         """
         generate sample and evaluate (plot) NN approximation when debug_mode=True
@@ -1213,12 +1211,78 @@ class Net(torch.nn.Module):
                 milestones=self.lr_milestones,
                 gamma=self.lr_gamma,
             )
+            for epoch in range(self.epochs):
+                start = time.time()
+                if epoch % 100 == 0:  # only generate in the beginning
+                    x, y = self.gen_sample_for_p()
 
+                self.train()
+                optimizer.zero_grad()
+                loss = self.loss(self(x.T, p_or_u="p", patch=p).squeeze(), y)
+
+                # update model weights and schedule
+                loss.backward()
+                optimizer.step()
+                scheduler.step()
+
+                self.eval()
+                grid = np.linspace(self.x_lo, self.x_hi, 100)
+                x_mid = x[1, 0].item() if self.fix_all_dim_except_first else (self.x_lo + self.x_hi) / 2
+                t_lo = self.T
+                grid_nd = np.concatenate(
+                    (
+                        t_lo * np.ones((1, 100)),
+                        np.expand_dims(grid, axis=0),
+                        x_mid * np.ones((self.dim - 1, 100)),
+                    ),
+                    axis=0,
+                ).astype(np.float32)
+                nn = (
+                    self(
+                        torch.tensor(grid_nd[1:].T, device=self.device), patch=0, p_or_u="p"
+                    )
+                        .detach()
+                        .cpu()
+                )
+                exact = (
+                    self.exact_p_fun(torch.tensor(grid_nd.T, device=self.device))
+                        .detach()
+                        .cpu()
+                )
+                if not self.fix_all_dim_except_first:
+                    exact += nn.mean() - exact.mean()
+                fig = plt.figure()
+                if self.fix_all_dim_except_first:
+                    plt.plot(x.detach().cpu()[0, :], y.detach().cpu(), '+', label="MC samples")
+                plt.plot(grid, nn, label=f"NN")
+                plt.plot(grid, exact, label=f"exact")
+                plt.title(f"Epoch {epoch:04}")
+                plt.legend(loc="upper left")
+                fig.savefig(
+                    f"{self.working_dir}/plot/p/epoch_{epoch:04}.png", bbox_inches="tight"
+                )
+                plt.close()
+                torch.save(
+                    self.state_dict(), f"{self.working_dir}/model/epoch_{epoch:04}.pt"
+                )
+                logging.info(
+                    f"Pre-training epoch {epoch:3.0f}: one loop takes {time.time() - start:4.0f} seconds with loss {loss.detach():.2E}."
+                )
+
+            # initialize optimizer
+            optimizer = torch.optim.Adam(
+                self.parameters(), lr=self.lr, weight_decay=self.weight_decay
+            )
+            scheduler = torch.optim.lr_scheduler.MultiStepLR(
+                optimizer,
+                milestones=self.lr_milestones,
+                gamma=self.lr_gamma,
+            )
             # loop through epochs
             for epoch in range(self.epochs):
                 # clear gradients and evaluate training loss
                 optimizer.zero_grad()
-                if epoch % 100 == 0:
+                if epoch % self.epochs == 0:  # only generate in the beginning
                     # the running statistics for p is very different from time to time, so we do not track them
                     self.eval()
                     start = time.time()
@@ -1235,21 +1299,22 @@ class Net(torch.nn.Module):
                 self.train()
                 start = time.time()
                 predict = self(x, patch=p)
-                x_lo = torch.tensor([self.t_lo] + [self.x_lo] * self.dim, device=self.device)
-                x_hi = torch.tensor([self.T] + [self.x_hi] * self.dim, device=self.device)
-                states_per_batch = 100000
-                unif = (
-                    torch.rand((self.dim + 1) * self.nb_states, device=self.device, requires_grad=True)
-                         .reshape(self.nb_states, self.dim + 1)
-                )
-                xx = (x_lo + (x_hi - x_lo) * unif).T
-                grad = 0
-                for (idx, c) in zip(self.deriv_condition_zeta_map, self.deriv_condition_deriv_map):
-                    # additional t coordinate
-                    grad += self.nth_derivatives(
-                        np.insert(c, 0, 0), self(xx.T, patch=p)[:, idx], x
+                loss = self.loss(y, predict)
+                if self.deriv_condition_coeff > 0:
+                    x_lo = torch.tensor([self.t_lo] + [self.x_lo] * self.dim, device=self.device)
+                    x_hi = torch.tensor([self.T] + [self.x_hi] * self.dim, device=self.device)
+                    unif = (
+                        torch.rand((self.dim + 1) * self.nb_states, device=self.device, requires_grad=True)
+                             .reshape(self.nb_states, self.dim + 1)
                     )
-                loss = self.loss(y, predict) + self.deriv_condition_coeff * self.loss(grad, torch.zeros_like(grad))
+                    xx = (x_lo + (x_hi - x_lo) * unif).T
+                    grad = 0
+                    for (idx, c) in zip(self.deriv_condition_zeta_map, self.deriv_condition_deriv_map):
+                        # additional t coordinate
+                        grad += self.nth_derivatives(
+                            np.insert(c, 0, 0), self(xx.T, patch=p)[:, idx], xx
+                        )
+                    loss += self.deriv_condition_coeff * self.loss(grad, torch.zeros_like(grad))
 
                 # additional loss regarding poisson equation
                 if self.poisson_loss_coeff > 0:
@@ -1258,32 +1323,23 @@ class Net(torch.nn.Module):
                     for i in range(self.dim):
                         order[i + 1] += 2
                         poisson_lhs += self.nth_derivatives(
-                            order, self(xx.T, p_or_u="p", patch=p), x
+                            order, self(xx.T, p_or_u="p", patch=p), xx
                         )
                         order[i + 1] -= 2
                     for i in range(self.dim):
                         for j in range(self.dim):
                             order[i + 1] += 1
                             tmp = self.nth_derivatives(
-                                order, self(xx.T, patch=p)[:, j], x
+                                order, self(xx.T, patch=p)[:, j], xx
                             )
                             order[i + 1] -= 1
                             order[j + 1] += 1
                             tmp *= self.nth_derivatives(
-                                order, self(xx.T, patch=p)[:, i], x
+                                order, self(xx.T, patch=p)[:, i], xx
                             )
                             order[j + 1] -= 1
                             poisson_rhs -= tmp
                     loss += self.poisson_loss_coeff * self.loss(poisson_lhs, poisson_rhs)
-
-                # x, y = self.gen_sample(
-                #     patch=p,
-                #     coordinate=self.deriv_condition_zeta_map,
-                #     code=-self.deriv_condition_deriv_map - 1,
-                #     discard_outlier=True,
-                # )
-                # y = y.sum(dim=-1)
-                # loss = self.loss(y, torch.zeros_like(y))
 
                 # update model weights and schedule
                 loss.backward()
@@ -1302,28 +1358,6 @@ class Net(torch.nn.Module):
                     ),
                     axis=0,
                 ).astype(np.float32)
-                nn = (
-                    self(
-                        torch.tensor(grid_nd.T, device=self.device), patch=0, p_or_u="p"
-                    )
-                    .detach()
-                    .cpu()
-                )
-                exact = (
-                    self.exact_p_fun(torch.tensor(grid_nd.T, device=self.device))
-                    .detach()
-                    .cpu()
-                )
-                exact += nn.mean() - exact.mean()
-                fig = plt.figure()
-                plt.plot(grid, nn, label=f"NN")
-                plt.plot(grid, exact, label=f"exact")
-                plt.title(f"Epoch {epoch:04}")
-                plt.legend(loc="upper left")
-                fig.savefig(
-                    f"{self.working_dir}/plot/p/epoch_{epoch:04}.png", bbox_inches="tight"
-                )
-                plt.close()
                 nn = (
                     self(
                         torch.tensor(grid_nd.T, device=self.device), patch=0
