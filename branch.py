@@ -174,7 +174,7 @@ class Net(torch.nn.Module):
         self.exponential_lambda = (
             branch_exponential_lambda
             if branch_exponential_lambda is not None
-            else -math.log(0.8) / T
+            else -math.log(0.95) / T
         )
         self.epochs = epochs
         self.antithetic = antithetic
@@ -1272,9 +1272,8 @@ if __name__ == "__main__":
         deriv_condition_zeta_map = np.array([0, 1])
     elif problem == "abc_3d":
         # ABC flow
-        T, x_lo, x_hi, beta = 0.1, 0, 2 * math.pi, 0.01
-        A = B = 0.5
-        C = 0.0
+        T, x_lo, x_hi, beta = 0.7, 0, 2 * math.pi, 0.01
+        A = B = C = 0.5
         # deriv_map is n x d array defining lambda_1, ..., lambda_n
         deriv_map = np.array(
             [
@@ -1385,18 +1384,19 @@ if __name__ == "__main__":
         epochs=3000,
         branch_lr=1e-2,
         lr_milestones=[1000, 2000],
-        lr_gamma=.5,
-        branch_nb_path_per_state=100,
-        branch_nb_states=100,
-        branch_nb_states_per_batch=100,
+        lr_gamma=.1,
+        branch_nb_path_per_state=1000,
+        branch_nb_states=100000,
+        branch_nb_states_per_batch=1000,
         beta=beta,
         layers=2,
-        batch_normalization=False,
+        neurons=20,
+        batch_normalization=True,
         debug=False,
         branch_activation="tanh",
         poisson_loss_coeff=0.,
-        deriv_condition_coeff=1.,
+        deriv_condition_coeff=0.,
     )
-    # model.error_calculation("logs/20220404-144009/model/epoch_2999.pt")
-    # model.error_calculation("logs/20220404-143842/model/epoch_2999.pt")
+    # model.error_calculation("logs/20220411-134639/model/epoch_2999.pt")
+    # model.error_calculation("logs/20220411-114948/model/epoch_2999.pt", nb_pts_spatial=2*45+1)
     model.train_and_eval()
