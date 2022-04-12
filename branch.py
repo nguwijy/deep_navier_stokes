@@ -327,24 +327,26 @@ class Net(torch.nn.Module):
         )
         return idx
 
-    def error_calculation(self, path_to_model, nb_pts_time=11, nb_pts_spatial=2*126+1):
+    def error_calculation(self, path_to_model, nb_pts_time=11, nb_pts_spatial=2*126+1, error_multiplier=1):
         self.load_state_dict(torch.load(path_to_model))
+        torch.set_printoptions(precision=2, sci_mode=True)
+        self.eval()
         x = np.linspace(self.x_lo, self.x_hi, nb_pts_spatial)
-        t = np.linspace(self.t_hi, self.t_lo, nb_pts_time)
-        arr = np.array(np.meshgrid(*([x]*self.dim + [t]))).T.reshape(-1, 3).astype(np.float32)
+        t = np.linspace(self.t_lo, self.t_hi, nb_pts_time)
+        arr = np.array(np.meshgrid(*([x]*self.dim + [t]))).T.reshape(-1, self.dim + 1).astype(np.float32)
         arr[:, [-1, 0]] = arr[:, [0, -1]]
         arr = torch.tensor(arr, device=device)
         error = []
         nn = self(arr, patch=0)
         overall_error = 0
         for i in range(self.dim):
-            error.append(1000 * (nn[:, i] - self.exact_u_fun(arr, i)).reshape(nb_pts_time, -1) ** 2)
+            error.append(error_multiplier * (nn[:, i] - self.exact_u_fun(arr, i)).reshape(nb_pts_time, -1) ** 2)
             overall_error += (error[-1])
         error.append(overall_error)
         mess = ""
         for i in range(self.dim):
             mess += f"The error e{i + 1} is {error[i].max(dim=1)[0]}; "
-        mess += f"The overall error is {error[-1].max(dim=1)[0]}."
+        mess += f"The overall error is {error[-1].max(dim=1)[0]}."  # :.2E
         print(mess)
 
     @staticmethod
