@@ -1073,7 +1073,7 @@ class Net(torch.nn.Module):
             fig = plt.figure()
             if self.fix_all_dim_except_first:
                 plt.plot(x.detach().cpu()[:, 1], y.detach().cpu()[:, i], '+', label="MC samples")
-            # plt.plot(grid, nn[:, i], label=f"NN")
+            plt.plot(grid, nn[:, i], label=f"NN")
             plt.plot(grid, exact, label=f"exact")
             if ylim is not None:
                 plt.ylim(ylim[i])
