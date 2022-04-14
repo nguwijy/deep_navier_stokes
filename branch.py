@@ -1045,6 +1045,45 @@ class Net(torch.nn.Module):
             torch.cat(yy, dim=-1),
         )
 
+    def plot_u(self, epoch, x=None, y=None, ylim=None):
+        grid = np.linspace(self.x_lo, self.x_hi, 100)
+        x_mid = x[0, 2].item() if self.fix_all_dim_except_first else (self.x_lo + self.x_hi) / 2
+        t_lo = x[0, 0].item() if self.fix_all_dim_except_first else self.T / 2
+        grid_nd = np.concatenate(
+            (
+                t_lo * np.ones((1, 100)),
+                np.expand_dims(grid, axis=0),
+                x_mid * np.ones((self.dim - 1, 100)),
+            ),
+            axis=0,
+        ).astype(np.float32)
+        nn = (
+            self(
+                torch.tensor(grid_nd.T, device=self.device), patch=0
+            )
+                .detach()
+                .cpu()
+        )
+        for i in range(self.dim):
+            exact = (
+                self.exact_u_fun(torch.tensor(grid_nd.T, device=self.device), i)
+                    .detach()
+                    .cpu()
+            )
+            fig = plt.figure()
+            if self.fix_all_dim_except_first:
+                plt.plot(x.detach().cpu()[:, 1], y.detach().cpu()[:, i], '+', label="MC samples")
+            # plt.plot(grid, nn[:, i], label=f"NN")
+            plt.plot(grid, exact, label=f"exact")
+            if ylim is not None:
+                plt.ylim(ylim[i])
+            plt.title(f"Epoch {epoch:04}")
+            plt.legend(loc="upper left")
+            fig.savefig(
+                f"{self.working_dir}/plot/u{i}/epoch_{epoch:04}.png", bbox_inches="tight"
+            )
+            plt.close()
+
     def train_and_eval(self, debug_mode=False):
         """
         generate sample and evaluate (plot) NN approximation when debug_mode=True
@@ -1195,41 +1234,7 @@ class Net(torch.nn.Module):
                 scheduler.step()
 
                 self.eval()
-                grid = np.linspace(self.x_lo, self.x_hi, 100)
-                x_mid = x[0, 2].item() if self.fix_all_dim_except_first else (self.x_lo + self.x_hi) / 2
-                t_lo = x[0, 0].item() if self.fix_all_dim_except_first else self.T / 2
-                grid_nd = np.concatenate(
-                    (
-                        t_lo * np.ones((1, 100)),
-                        np.expand_dims(grid, axis=0),
-                        x_mid * np.ones((self.dim - 1, 100)),
-                    ),
-                    axis=0,
-                ).astype(np.float32)
-                nn = (
-                    self(
-                        torch.tensor(grid_nd.T, device=self.device), patch=0
-                    )
-                    .detach()
-                    .cpu()
-                )
-                for i in range(self.dim):
-                    exact = (
-                        self.exact_u_fun(torch.tensor(grid_nd.T, device=self.device), i)
-                        .detach()
-                        .cpu()
-                    )
-                    fig = plt.figure()
-                    if self.fix_all_dim_except_first:
-                        plt.plot(x.detach().cpu()[:, 1], y.detach().cpu()[:, i], '+', label="MC samples")
-                    plt.plot(grid, nn[:, i], label=f"NN")
-                    plt.plot(grid, exact, label=f"exact")
-                    plt.title(f"Epoch {epoch:04}")
-                    plt.legend(loc="upper left")
-                    fig.savefig(
-                        f"{self.working_dir}/plot/u{i}/epoch_{epoch:04}.png", bbox_inches="tight"
-                    )
-                    plt.close()
+                self.plot_u(epoch, x, y)
                 torch.save(
                     self.state_dict(), f"{self.working_dir}/model/epoch_{epoch:04}.pt"
                 )
