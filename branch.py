@@ -241,8 +241,6 @@ class Net(torch.nn.Module):
             # return the exact function for debug purposes
             if p_or_u == "p":
                 return self.exact_p_fun(torch.cat([self.T * torch.ones_like(x[:, :1]), x], dim=-1))
-            else:
-                return torch.stack([self.exact_u_fun(x, i) for i in range(self.dim)], dim=-1)
 
         if patch is not None:
             y = x
@@ -1193,103 +1191,105 @@ class Net(torch.nn.Module):
         generate sample and evaluate (plot) NN approximation when debug_mode=True
         """
         for p in range(self.patches):
-            # initialize optimizer
-            optimizer = torch.optim.Adam(
-                self.parameters(), lr=self.lr, weight_decay=self.weight_decay
-            )
-            scheduler = torch.optim.lr_scheduler.MultiStepLR(
-                optimizer,
-                milestones=self.lr_milestones,
-                gamma=self.lr_gamma,
-            )
-            train_p_start = time.time()
-            for epoch in range(self.epochs):
-                start = time.time()
-                if epoch % 100 == 0:  # only generate in the beginning
-                    x, y = self.gen_sample_for_p()
-                    poisson_rhs = 0
-                    order = np.array([0] * self.dim)
+            if not self.debug:
+                # do not need to train for p network in debug mode
+                # initialize optimizer
+                optimizer = torch.optim.Adam(
+                    self.parameters(), lr=self.lr, weight_decay=self.weight_decay
+                )
+                scheduler = torch.optim.lr_scheduler.MultiStepLR(
+                    optimizer,
+                    milestones=self.lr_milestones,
+                    gamma=self.lr_gamma,
+                )
+                train_p_start = time.time()
+                for epoch in range(self.epochs):
+                    start = time.time()
+                    if epoch % 100 == 0:  # only generate in the beginning
+                        x, y = self.gen_sample_for_p()
+                        poisson_rhs = 0
+                        order = np.array([0] * self.dim)
+                        xx = x.detach().clone().requires_grad_(True)
+                        for i in range(self.dim):
+                            for j in range(self.dim):
+                                order[i] += 1
+                                tmp = self.nth_derivatives(
+                                    order, self.phi_fun(xx, j), xx
+                                )
+                                order[i] -= 1
+                                order[j] += 1
+                                tmp *= self.nth_derivatives(
+                                    order, self.phi_fun(xx, i), xx
+                                )
+                                order[j] -= 1
+                                poisson_rhs -= tmp
+                        poisson_rhs = poisson_rhs.detach()
+
+                    optimizer.zero_grad()
+                    self.train()
+                    loss = self.loss(self(x.T, p_or_u="p", patch=p).squeeze(), y)
+                    self.eval()
+                    poisson_lhs = 0
                     xx = x.detach().clone().requires_grad_(True)
                     for i in range(self.dim):
-                        for j in range(self.dim):
-                            order[i] += 1
-                            tmp = self.nth_derivatives(
-                                order, self.phi_fun(xx, j), xx
-                            )
-                            order[i] -= 1
-                            order[j] += 1
-                            tmp *= self.nth_derivatives(
-                                order, self.phi_fun(xx, i), xx
-                            )
-                            order[j] -= 1
-                            poisson_rhs -= tmp
-                    poisson_rhs = poisson_rhs.detach()
+                        order[i] += 2
+                        poisson_lhs += self.nth_derivatives(
+                            order, self(xx.T, p_or_u="p", patch=p), xx
+                        )
+                        order[i] -= 2
+                    loss += self.loss(poisson_lhs, poisson_rhs)
 
-                optimizer.zero_grad()
-                self.train()
-                loss = self.loss(self(x.T, p_or_u="p", patch=p).squeeze(), y)
-                self.eval()
-                poisson_lhs = 0
-                xx = x.detach().clone().requires_grad_(True)
-                for i in range(self.dim):
-                    order[i] += 2
-                    poisson_lhs += self.nth_derivatives(
-                        order, self(xx.T, p_or_u="p", patch=p), xx
+                    # update model weights and schedule
+                    loss.backward()
+                    optimizer.step()
+                    scheduler.step()
+
+                    self.eval()
+                    grid = np.linspace(self.x_lo, self.x_hi, 100)
+                    x_mid = x[1, 0].item() if self.fix_all_dim_except_first else (self.x_lo + self.x_hi) / 2
+                    t_lo = self.T
+                    grid_nd = np.concatenate(
+                        (
+                            t_lo * np.ones((1, 100)),
+                            np.expand_dims(grid, axis=0),
+                            x_mid * np.ones((self.dim - 1, 100)),
+                        ),
+                        axis=0,
+                    ).astype(np.float32)
+                    nn = (
+                        self(
+                            torch.tensor(grid_nd[1:].T, device=self.device), patch=0, p_or_u="p"
+                        )
+                            .detach()
+                            .cpu()
                     )
-                    order[i] -= 2
-                loss += self.loss(poisson_lhs, poisson_rhs)
-
-                # update model weights and schedule
-                loss.backward()
-                optimizer.step()
-                scheduler.step()
-
-                self.eval()
-                grid = np.linspace(self.x_lo, self.x_hi, 100)
-                x_mid = x[1, 0].item() if self.fix_all_dim_except_first else (self.x_lo + self.x_hi) / 2
-                t_lo = self.T
-                grid_nd = np.concatenate(
-                    (
-                        t_lo * np.ones((1, 100)),
-                        np.expand_dims(grid, axis=0),
-                        x_mid * np.ones((self.dim - 1, 100)),
-                    ),
-                    axis=0,
-                ).astype(np.float32)
-                nn = (
-                    self(
-                        torch.tensor(grid_nd[1:].T, device=self.device), patch=0, p_or_u="p"
+                    exact = (
+                        self.exact_p_fun(torch.tensor(grid_nd.T, device=self.device))
+                            .detach()
+                            .cpu()
                     )
-                        .detach()
-                        .cpu()
-                )
-                exact = (
-                    self.exact_p_fun(torch.tensor(grid_nd.T, device=self.device))
-                        .detach()
-                        .cpu()
-                )
-                if not self.fix_all_dim_except_first:
-                    exact += nn.mean() - exact.mean()
-                fig = plt.figure()
-                if self.fix_all_dim_except_first:
-                    plt.plot(x.detach().cpu()[0, :], y.detach().cpu(), '+', label="MC samples")
-                plt.plot(grid, nn, label=f"NN")
-                plt.plot(grid, exact, label=f"exact")
-                plt.title(f"Epoch {epoch:04}")
-                plt.legend(loc="upper left")
-                fig.savefig(
-                    f"{self.working_dir}/plot/p/epoch_{epoch:04}.png", bbox_inches="tight"
-                )
-                plt.close()
-                torch.save(
-                    self.state_dict(), f"{self.working_dir}/model/epoch_{epoch:04}.pt"
-                )
+                    if not self.fix_all_dim_except_first:
+                        exact += nn.mean() - exact.mean()
+                    fig = plt.figure()
+                    if self.fix_all_dim_except_first:
+                        plt.plot(x.detach().cpu()[0, :], y.detach().cpu(), '+', label="MC samples")
+                    plt.plot(grid, nn, label=f"NN")
+                    plt.plot(grid, exact, label=f"exact")
+                    plt.title(f"Epoch {epoch:04}")
+                    plt.legend(loc="upper left")
+                    fig.savefig(
+                        f"{self.working_dir}/plot/p/epoch_{epoch:04}.png", bbox_inches="tight"
+                    )
+                    plt.close()
+                    torch.save(
+                        self.state_dict(), f"{self.working_dir}/model/epoch_{epoch:04}.pt"
+                    )
+                    logging.info(
+                        f"Pre-training epoch {epoch:3.0f}: one loop takes {time.time() - start:4.0f} seconds with loss {loss.detach():.2E}."
+                    )
                 logging.info(
-                    f"Pre-training epoch {epoch:3.0f}: one loop takes {time.time() - start:4.0f} seconds with loss {loss.detach():.2E}."
+                    f"Training of p takes {time.time() - train_p_start:4.0f} seconds."
                 )
-            logging.info(
-                f"Training of p takes {time.time() - train_p_start:4.0f} seconds."
-            )
 
             # initialize optimizer
             optimizer = torch.optim.Adam(
