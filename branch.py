@@ -1202,6 +1202,7 @@ class Net(torch.nn.Module):
                 milestones=self.lr_milestones,
                 gamma=self.lr_gamma,
             )
+            train_p_start = time.time()
             for epoch in range(self.epochs):
                 start = time.time()
                 if epoch % 100 == 0:  # only generate in the beginning
@@ -1286,6 +1287,9 @@ class Net(torch.nn.Module):
                 logging.info(
                     f"Pre-training epoch {epoch:3.0f}: one loop takes {time.time() - start:4.0f} seconds with loss {loss.detach():.2E}."
                 )
+            logging.info(
+                f"Training of p takes {time.time() - train_p_start:4.0f} seconds."
+            )
 
             # initialize optimizer
             optimizer = torch.optim.Adam(
@@ -1296,6 +1300,7 @@ class Net(torch.nn.Module):
                 milestones=self.lr_milestones,
                 gamma=self.lr_gamma,
             )
+            train_u_start = time.time()
             # loop through epochs
             for epoch in range(self.epochs):
                 # clear gradients and evaluate training loss
@@ -1373,6 +1378,9 @@ class Net(torch.nn.Module):
                 logging.info(
                     f"Epoch {epoch:3.0f}: one loop takes {time.time() - start:4.0f} seconds with loss {loss.detach():.2E}."
                 )
+            logging.info(
+                f"Training of u takes {time.time() - train_u_start:4.0f} seconds."
+            )
 
 
 if __name__ == "__main__":
