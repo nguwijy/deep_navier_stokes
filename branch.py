@@ -203,9 +203,7 @@ class Net(torch.nn.Module):
                  .reshape(nb_mc, -1, 1)
         )
         tau = self.tau_lo + (self.tau_hi - self.tau_lo) * unif
-        y = torch.sqrt(tau) * torch.randn(
-                nb_mc, x.shape[1], self.dim, device=self.device
-            )
+        y = self.gen_bm(tau.transpose(0, -1), x.shape[1], var=1).transpose(0, -1)
         x = x + y
         x = x.reshape(-1, self.dim).T
         order = np.array([0] * self.dim)
