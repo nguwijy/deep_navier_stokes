@@ -532,6 +532,8 @@ class Net(torch.nn.Module):
         and return (dw, -dw)
         """
         var = 2 * self.beta if var is None else var
+        if not torch.is_tensor(dt):
+            dt = torch.tensor(dt)
         dt = dt.clip(min=0.0)  # so that we can safely take square root of dt
 
         if self.antithetic:
