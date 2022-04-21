@@ -240,7 +240,7 @@ class Net(torch.nn.Module):
         if self.debug:
             # return the exact function for debug purposes
             if p_or_u == "p":
-                return self.exact_p_fun(x)
+                return self.exact_p_fun(torch.cat([self.T * torch.ones_like(x[:, :1]), x], dim=-1))
             else:
                 return torch.stack([self.exact_u_fun(x, i) for i in range(self.dim)], dim=-1)
 
