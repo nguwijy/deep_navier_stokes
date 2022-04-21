@@ -1117,13 +1117,13 @@ class Net(torch.nn.Module):
             torch.cat(yy, dim=0),
         )
 
-    def gen_sample_for_p(self):
+    def gen_sample_for_p(self, gen_y=True, overtrain_rate=.5):
         states_per_batch = min(self.nb_states, self.nb_states_per_batch)
         batches = math.ceil(self.nb_states / states_per_batch)
         xx, yy = [], []
         # widen the domain from [x_lo, x_hi] to [x_lo - .5*(x_hi-x_lo), x_hi + .5*(x_hi-x_lo)]
         x_lo, x_hi = self.x_lo, self.x_hi
-        x_lo, x_hi = x_lo - .5*(x_hi-x_lo), x_hi + .5*(x_hi-x_lo)
+        x_lo, x_hi = x_lo - overtrain_rate * (x_hi - x_lo), x_hi + overtrain_rate * (x_hi - x_lo)
         for _ in range(batches):
             unif = (
                 torch.rand(self.dim * states_per_batch, device=self.device)
@@ -1132,15 +1132,19 @@ class Net(torch.nn.Module):
             x = (x_lo + (x_hi - x_lo) * unif).T
             if self.dim > 1 and self.fix_all_dim_except_first:
                 x[1:, :] = (x_hi + x_lo) / 2
-            y = self.calculate_p_from_u(x.T)
+            if gen_y:
+                if self.quantization:
+                    y = self.calculate_p_from_u_quant(x.T)
+                else:
+                    y = self.calculate_p_from_u(x.T)
+                yy.append(y)
             xx.append(x)
-            yy.append(y)
         return (
             torch.cat(xx, dim=-1),
-            torch.cat(yy, dim=-1),
+            torch.cat(yy, dim=-1) if yy else None,
         )
 
-    def plot_u(self, epoch, x=None, y=None, ylim=None):
+    def plot_u(self, epoch, x=None, y=None, ylim=None, save_dir=None):
         grid = np.linspace(self.x_lo, self.x_hi, 100)
         x_mid = x[0, 2].item() if self.fix_all_dim_except_first else (self.x_lo + self.x_hi) / 2
         t_lo = x[0, 0].item() if self.fix_all_dim_except_first else self.T / 2
@@ -1174,9 +1178,14 @@ class Net(torch.nn.Module):
                 plt.ylim(ylim[i])
             plt.title(f"Epoch {epoch:04}")
             plt.legend(loc="upper left")
-            fig.savefig(
-                f"{self.working_dir}/plot/u{i}/epoch_{epoch:04}.png", bbox_inches="tight"
-            )
+            if save_dir is None:
+                fig.savefig(
+                    f"{self.working_dir}/plot/u{i}/epoch_{epoch:04}.png", bbox_inches="tight"
+                )
+            else:
+                fig.savefig(
+                    f"{save_dir}/plot/u{i}/epoch_{epoch:04}.png", bbox_inches="tight"
+                )
             plt.close()
 
     def train_and_eval(self, debug_mode=False):
