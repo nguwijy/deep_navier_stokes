@@ -1324,13 +1324,8 @@ class Net(torch.nn.Module):
                 predict = self(x, patch=p)
                 loss = self.loss(y, predict)
                 if self.deriv_condition_coeff > 0:
-                    x_lo = torch.tensor([self.t_lo] + [self.x_lo] * self.dim, device=self.device)
-                    x_hi = torch.tensor([self.T] + [self.x_hi] * self.dim, device=self.device)
-                    unif = (
-                        torch.rand((self.dim + 1) * self.nb_states, device=self.device, requires_grad=True)
-                             .reshape(self.nb_states, self.dim + 1)
-                    )
-                    xx = (x_lo + (x_hi - x_lo) * unif).T
+                    self.eval()
+                    xx = x.T.detach().clone().requires_grad_(True)
                     grad = 0
                     for (idx, c) in zip(self.deriv_condition_zeta_map, self.deriv_condition_deriv_map):
                         # additional t coordinate
