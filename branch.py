@@ -1206,10 +1206,37 @@ class Net(torch.nn.Module):
                 start = time.time()
                 if epoch % 100 == 0:  # only generate in the beginning
                     x, y = self.gen_sample_for_p()
+                    poisson_rhs = 0
+                    order = np.array([0] * self.dim)
+                    xx = x.detach().clone().requires_grad_(True)
+                    for i in range(self.dim):
+                        for j in range(self.dim):
+                            order[i] += 1
+                            tmp = self.nth_derivatives(
+                                order, self.phi_fun(xx, j), xx
+                            )
+                            order[i] -= 1
+                            order[j] += 1
+                            tmp *= self.nth_derivatives(
+                                order, self.phi_fun(xx, i), xx
+                            )
+                            order[j] -= 1
+                            poisson_rhs -= tmp
+                    poisson_rhs = poisson_rhs.detach()
 
-                self.train()
                 optimizer.zero_grad()
+                self.train()
                 loss = self.loss(self(x.T, p_or_u="p", patch=p).squeeze(), y)
+                self.eval()
+                poisson_lhs = 0
+                xx = x.detach().clone().requires_grad_(True)
+                for i in range(self.dim):
+                    order[i] += 2
+                    poisson_lhs += self.nth_derivatives(
+                        order, self(xx.T, p_or_u="p", patch=p), xx
+                    )
+                    order[i] -= 2
+                loss += self.loss(poisson_lhs, poisson_rhs)
 
                 # update model weights and schedule
                 loss.backward()
