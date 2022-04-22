@@ -56,6 +56,8 @@ class Net(torch.nn.Module):
         branch_patches=1,
         outlier_percentile=1,
         outlier_multiplier=10,
+        plot_y_lim=None,
+        quantization=False,
         **kwargs,
     ):
         super(Net, self).__init__()
@@ -70,6 +72,23 @@ class Net(torch.nn.Module):
         self.n, self.dim = deriv_map.shape
         self.nprime = sum(zeta_map == -1)
         self.patches = branch_patches
+
+        self.quantization = quantization
+        if quantization:
+            from scipy import spatial
+            pts = 100
+            tmp = np.loadtxt(f"quantization/{pts}_{self.dim}_nopti")
+            self.quant_prob = torch.tensor(
+                    tmp[:pts, 0],
+                    device=device,
+                    dtype=torch.get_default_dtype()
+            )
+            self.quant_grids_tree = spatial.KDTree(tmp[:pts, 1:(self.dim+1)])
+            self.quant_grids_tensor = torch.tensor(
+                    self.quant_grids_tree.data,
+                    device=device,
+                    dtype=torch.get_default_dtype()
+            )
 
         # store the (faa di bruno) fdb results for quicker lookup
         start = time.time()
@@ -193,6 +212,42 @@ class Net(torch.nn.Module):
         timestr = time.strftime("%Y%m%d-%H%M%S")  # current time stamp
         self.working_dir = f"logs/{timestr}"
         self.log_config()
+        self.plot_y_lim = plot_y_lim
+
+    def calculate_p_from_u_quant(self, x):
+        x = x.detach().clone()
+        dt = (self.tau_hi - self.tau_lo)/100
+        tnow = self.tau_lo
+        ans, adj = 0, 0
+        while tnow + 1e-10 < self.tau_hi:
+            exact_y = self.quant_grids_tensor.data.unsqueeze(1).repeat(1, x.shape[0], 1)
+            # add y to x
+            exact_xy = (x + math.sqrt(tnow) * exact_y).reshape(-1, self.dim).T.requires_grad_(True)
+            # reshape y
+            exact_y = math.sqrt(tnow) * exact_y.reshape(-1, self.dim)
+            # multiplier
+            exact_multiplier = dt * (exact_y ** 2).sum(dim=-1) / (2 * tnow)
+            if self.dim > 2:
+                exact_multiplier /= (self.dim - 2)
+            elif self.dim == 2:
+                exact_multiplier *= -torch.log((exact_y ** 2).sum(dim=-1).sqrt())
+            order = np.array([0] * self.dim)
+            for i in range(self.dim):
+                for j in range(self.dim):
+                    order[i] += 1
+                    tmp3 = self.nth_derivatives(
+                        order, self.phi_fun(exact_xy, j), exact_xy
+                    )
+                    order[i] -= 1
+                    order[j] += 1
+                    tmp3 *= self.nth_derivatives(
+                        order, self.phi_fun(exact_xy, i), exact_xy
+                    )
+                    order[j] -= 1
+                    ans += exact_multiplier * tmp3
+            tnow += dt
+        ans = (ans.reshape(-1, x.shape[0]).T * self.quant_prob).sum(dim=-1)
+        return ans.detach()
 
     def calculate_p_from_u(self, x):
         x = x.detach().clone().requires_grad_(True)
@@ -1143,7 +1198,8 @@ class Net(torch.nn.Module):
             torch.cat(yy, dim=-1) if yy else None,
         )
 
-    def plot_u(self, epoch, x=None, y=None, ylim=None, save_dir=None):
+    def plot_u(self, epoch, x=None, y=None, save_dir=None):
+        self.eval()
         grid = np.linspace(self.x_lo, self.x_hi, 100)
         x_mid = x[0, 2].item() if self.fix_all_dim_except_first else (self.x_lo + self.x_hi) / 2
         t_lo = x[0, 0].item() if self.fix_all_dim_except_first else self.T / 2
@@ -1154,7 +1210,7 @@ class Net(torch.nn.Module):
                 x_mid * np.ones((self.dim - 1, 100)),
             ),
             axis=0,
-        ).astype(np.float32)
+        )
         nn = (
             self(
                 torch.tensor(
@@ -1178,8 +1234,8 @@ class Net(torch.nn.Module):
                 plt.plot(x.detach().cpu()[:, 1], y.detach().cpu()[:, i], '+', label="MC samples")
             plt.plot(grid, nn[:, i], label=f"NN")
             plt.plot(grid, exact, label=f"exact")
-            if ylim is not None:
-                plt.ylim(ylim[i])
+            if self.plot_y_lim is not None and epoch == (self.epochs - 1):
+                plt.ylim(self.plot_y_lim[i])
             plt.title(f"Epoch {epoch:04}")
             plt.legend(loc="upper left")
             if save_dir is None:
@@ -1376,7 +1432,6 @@ class Net(torch.nn.Module):
                 optimizer.step()
                 scheduler.step()
 
-                self.eval()
                 self.plot_u(epoch, x, y)
                 torch.save(
                     self.state_dict(), f"{self.working_dir}/model/epoch_{epoch:04}.pt"
@@ -1391,8 +1446,6 @@ class Net(torch.nn.Module):
 
 
 if __name__ == "__main__":
-    torch.cuda.empty_cache()  # does this fix the CUDA error??
-
     # configurations
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     problem = ["taylor_green_2d", "abc_3d"][0]
@@ -1546,7 +1599,10 @@ if __name__ == "__main__":
         debug=False,
         branch_activation="tanh",
         poisson_loss_coeff=0.,
-        deriv_condition_coeff=0.,
+        deriv_condition_coeff=1.,
+        quantization=False,
+        fix_all_dim_except_first=False,
+        plot_y_lim=[[-1, 1], [-1, 1]] if problem == "taylor_green_2d" else [[-1, 0], [-1.05, 0.05], [-.55, .55]],
     )
     # model.error_calculation("logs/20220411-134639/model/epoch_2999.pt")
     # model.error_calculation("logs/20220411-114948/model/epoch_2999.pt", nb_pts_spatial=2*45+1)
