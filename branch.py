@@ -185,7 +185,7 @@ class Net(torch.nn.Module):
         self.t_lo = t_lo
         self.t_hi = t_lo if fix_all_dim_except_first else t_hi
         self.T = T
-        self.tau_lo, self.tau_hi = 1e-5, 6  # for negative coordinate
+        self.tau_lo, self.tau_hi = 1e-5, 10  # for negative coordinate
         self.beta = beta
         self.delta_t = (T - t_lo) / branch_patches
         self.outlier_percentile = outlier_percentile
@@ -1473,6 +1473,8 @@ if __name__ == "__main__":
 
     if problem == "taylor_green_2d":
         # taylor green vortex
+        # T, x_lo, x_hi, beta = 10.0, 0, 2 * math.pi, .01
+        # T, x_lo, x_hi, beta = 1.0, 0, 2 * math.pi, .1
         T, x_lo, x_hi, beta = 0.25, 0, 2 * math.pi, 1.0
         # deriv_map is n x d array defining lambda_1, ..., lambda_n
         deriv_map = np.array(
@@ -1498,6 +1500,7 @@ if __name__ == "__main__":
     elif problem == "abc_3d":
         # ABC flow
         T, x_lo, x_hi, beta = 0.7, 0, 2 * math.pi, 0.01
+        # T, x_lo, x_hi, beta = 0.7, 0, 2 * math.pi, 0.0001
         A = B = C = 0.5
         # deriv_map is n x d array defining lambda_1, ..., lambda_n
         deriv_map = np.array(
@@ -1606,7 +1609,7 @@ if __name__ == "__main__":
         x_hi=x_hi,
         device=device,
         verbose=True,
-        epochs=3000,
+        epochs=10000,
         branch_lr=1e-2,
         lr_milestones=[1000, 2000],
         lr_gamma=.1,
@@ -1615,7 +1618,7 @@ if __name__ == "__main__":
         branch_nb_states_per_batch=1000,
         beta=beta,
         layers=2,
-        neurons=20,
+        neurons=100,
         batch_normalization=True,
         debug=False,
         branch_activation="tanh",
@@ -1625,6 +1628,27 @@ if __name__ == "__main__":
         fix_all_dim_except_first=False,
         plot_y_lim=[[-1, 1], [-1, 1]] if problem == "taylor_green_2d" else [[-1, 0], [-1.05, 0.05], [-.55, .55]],
     )
-    # model.error_calculation("logs/20220411-134639/model/epoch_2999.pt")
-    # model.error_calculation("logs/20220411-114948/model/epoch_2999.pt", nb_pts_spatial=2*45+1)
+    path_to_model = {
+        # oldest version with only mc
+        "tg_1":    "logs/20220411-134639/model/epoch_2999.pt",  # taylor green, beta = 1, T = 0.25
+        "abc_1":   "logs/20220411-114948/model/epoch_2999.pt",  # abc, beta = .01, T = 0.7
+        # mc with poisson loss for terminal p
+        "tg_2":    "logs/20220419-195647/model/epoch_2999.pt",  # taylor green, beta = 1/2, T = 0.25
+        "abc_2_1": "logs/20220419-203230/model/epoch_2999.pt",  # abc, beta = .01/2, T = 0.7
+        "abc_2_2": "logs/20220419-184732/model/epoch_2999.pt",  # abc, beta = .01/200, T = 0.7
+        # mc with poisson loss for terminal p and divergence free loss for training u
+        "tg_3_1":  "logs/20220420-130200/model/epoch_2999.pt",  # taylor green, beta = 1/2, T = 0.25
+        "abc_3_1": "logs/20220420-133449/model/epoch_2999.pt",  # abc, beta = .01/2, T = 0.7
+        "abc_3_2": "logs/20220420-145854/model/epoch_2999.pt",  # abc, beta = .01/200, T = 0.7
+        # mc with poisson loss for terminal p and divergence free loss for training u, epochs 3000 -> 10000
+        "tg_4_1":  "logs/20220421-214214/model/epoch_9999.pt",  # taylor green, beta = .01, T = 10
+        "tg_4_2":  "logs/20220421-231219/model/epoch_9999.pt",  # taylor green, beta = 1., T = .25
+        "tg_4_3":  "logs/20220422-000206/model/epoch_9999.pt",  # taylor green, beta = .1, T = 1
+        "abc_4_1": "logs/20220422-111431/model/epoch_9999.pt",  # abc, beta = .01, T = 0.7
+        "abc_3_2": "logs/20220422-135732/model/epoch_9999.pt",  # abc, beta = .0001, T = 0.7
+    }["tg_4_1"]
+    # to continue training from somewhere or to debug some particular models
+    # model.load_dict(path_to_model)
+    # model.error_calculation(nb_pts_spatial=2*126+1 if model.dim == 2 else 2*45+1)
+
     model.train_and_eval()
