@@ -158,6 +158,7 @@ class Net(torch.nn.Module):
                 for _ in range(branch_patches)
             ]
         )
+        self.loaded_dict = False
         self.lr = branch_lr
         self.lr_milestones = lr_milestones
         self.lr_gamma = lr_gamma
@@ -386,8 +387,7 @@ class Net(torch.nn.Module):
         mess += "& --- \\\\"
         logging.info(mess)
 
-    def error_calculation(self, path_to_model, nb_pts_time=11, nb_pts_spatial=2*126+1, error_multiplier=1):
-        self.load_state_dict(torch.load(path_to_model))
+    def error_calculation(self, nb_pts_time=11, nb_pts_spatial=2*126+1, error_multiplier=1):
         self.eval()
         x = np.linspace(self.x_lo, self.x_hi, nb_pts_spatial)
         t = np.linspace(self.t_lo, self.t_hi, nb_pts_time)
@@ -1248,12 +1248,16 @@ class Net(torch.nn.Module):
                 )
             plt.close()
 
+    def load_dict(self, path_to_model):
+        self.loaded_dict = True
+        self.load_state_dict(torch.load(path_to_model))
+
     def train_and_eval(self, debug_mode=False):
         """
         generate sample and evaluate (plot) NN approximation when debug_mode=True
         """
         for p in range(self.patches):
-            if not self.debug:
+            if not (self.debug or self.loaded_dict):
                 # do not need to train for p network in debug mode
                 # initialize optimizer
                 optimizer = torch.optim.Adam(
