@@ -336,9 +336,9 @@ class Net(torch.nn.Module):
         self.eval()
         x = np.linspace(self.x_lo, self.x_hi, nb_pts_spatial)
         t = np.linspace(self.t_lo, self.t_hi, nb_pts_time)
-        arr = np.array(np.meshgrid(*([x]*self.dim + [t]))).T.reshape(-1, self.dim + 1).astype(np.float32)
+        arr = np.array(np.meshgrid(*([x]*self.dim + [t]))).T.reshape(-1, self.dim + 1)
         arr[:, [-1, 0]] = arr[:, [0, -1]]
-        arr = torch.tensor(arr, device=device)
+        arr = torch.tensor(arr, device=device, dtype=torch.get_default_dtype())
         error = []
         nn = []
         cur, batch_size, last = 0, 100000, arr.shape[0]
@@ -420,10 +420,11 @@ class Net(torch.nn.Module):
         cur, batch_size, last = 0, 100000, arr.shape[0]
         while cur < last:
             nn.append(
-                    self(arr[cur:min(cur+batch_size, last), 1:],
-                         patch=0,
-                         p_or_u="p",
-                    ).squeeze().detach()
+                self(
+                    arr[cur:min(cur+batch_size, last), 1:],
+                    patch=0,
+                    p_or_u="p",
+                ).squeeze().detach()
             )
             cur += batch_size
         nn = torch.cat(nn, dim=0)
@@ -1156,16 +1157,21 @@ class Net(torch.nn.Module):
         ).astype(np.float32)
         nn = (
             self(
-                torch.tensor(grid_nd.T, device=self.device), patch=0
-            )
-                .detach()
-                .cpu()
+                torch.tensor(
+                    grid_nd.T,
+                    device=self.device,
+                    dtype=torch.get_default_dtype()
+                ), patch=0
+            ).detach().cpu()
         )
         for i in range(self.dim):
             exact = (
-                self.exact_u_fun(torch.tensor(grid_nd.T, device=self.device), i)
-                    .detach()
-                    .cpu()
+                self.exact_u_fun(
+                    torch.tensor(
+                        grid_nd.T,
+                        device=self.device,
+                        dtype=torch.get_default_dtype()), i
+                ).detach().cpu()
             )
             fig = plt.figure()
             if self.fix_all_dim_except_first:
@@ -1255,18 +1261,24 @@ class Net(torch.nn.Module):
                             x_mid * np.ones((self.dim - 1, 100)),
                         ),
                         axis=0,
-                    ).astype(np.float32)
+                    )
                     nn = (
                         self(
-                            torch.tensor(grid_nd[1:].T, device=self.device), patch=0, p_or_u="p"
-                        )
-                            .detach()
-                            .cpu()
+                            torch.tensor(
+                                grid_nd[1:].T,
+                                device=self.device,
+                                dtype=torch.get_default_dtype()
+                            ), patch=0, p_or_u="p"
+                        ).detach().cpu()
                     )
                     exact = (
-                        self.exact_p_fun(torch.tensor(grid_nd.T, device=self.device))
-                            .detach()
-                            .cpu()
+                        self.exact_p_fun(
+                            torch.tensor(
+                                grid_nd.T,
+                                device=self.device,
+                                dtype=torch.get_default_dtype()
+                            )
+                        ).detach().cpu()
                     )
                     if not self.fix_all_dim_except_first:
                         exact += nn.mean() - exact.mean()
