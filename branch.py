@@ -1462,6 +1462,7 @@ class Net(torch.nn.Module):
             logging.info(
                 f"Training of u takes {time.time() - train_u_start:4.0f} seconds."
             )
+        self.error_calculation(nb_pts_spatial=2*126+1 if self.dim == 2 else 2*45+1)
 
 
 if __name__ == "__main__":
