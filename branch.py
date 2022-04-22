@@ -1093,7 +1093,7 @@ class Net(torch.nn.Module):
         return ans
 
     def gen_sample(
-        self, patch, coordinate=None, code=None, t=None, discard_outlier=True
+        self, patch, coordinate=None, code=None, t=None, discard_outlier=True, gen_y=True,
     ):
         """
         generate sample based on the (t, x) boundary and the function gen_sample_batch
@@ -1131,44 +1131,51 @@ class Net(torch.nn.Module):
                 x[1:, :, :] = (x_hi + x_lo) / 2
             T = (t_lo + self.delta_t) * torch.ones_like(t)
             xx.append(torch.cat((t[:, :1], x[:, :, 0].T), dim=-1).detach())
-            yyy = []
-            for (idx, c) in zip(coordinate, code):
-                yy_tmp = self.gen_sample_batch(
-                    t,
-                    T,
-                    x,
-                    torch.ones_like(t),
-                    torch.ones_like(t),
-                    c,
-                    patch,
-                    idx,
-                ).detach()
-                if discard_outlier:
-                    # let (lo, hi) be
-                    # (self.outlier_percentile, 100 - self.outlier_percentile)
-                    # percentile of yy_tmp
-                    #
-                    # set the boundary as [lo-1000*(hi-lo), hi+1000*(hi-lo)]
-                    # samples out of this boundary is considered as outlier and removed
-                    lo, hi = (
-                        yy_tmp.nanquantile(
-                            self.outlier_percentile / 100, dim=1, keepdim=True
-                        ),
-                        yy_tmp.nanquantile(
-                            1 - self.outlier_percentile / 100, dim=1, keepdim=True
-                        ),
-                    )
-                    lo, hi = lo - self.outlier_multiplier * (hi - lo), hi + self.outlier_multiplier * (hi - lo)
-                    mask = torch.logical_and(lo <= yy_tmp, yy_tmp <= hi)
-                else:
-                    mask = ~yy_tmp.isnan()
-                yyy.append((yy_tmp.nan_to_num() * mask).sum(dim=1) / mask.sum(dim=1))
-            yy.append(torch.stack(yyy, dim=-1))
-            logging.info(f"Generated {batch_now + 1} out of {batches} batches with {time.time() - start} seconds.")
+            if gen_y:
+                yyy = []
+                for (idx, c) in zip(coordinate, code):
+                    yy_tmp = self.gen_sample_batch(
+                        t,
+                        T,
+                        x,
+                        torch.ones_like(t),
+                        torch.ones_like(t),
+                        c,
+                        patch,
+                        idx,
+                    ).detach()
+                    if discard_outlier:
+                        # let (lo, hi) be
+                        # (self.outlier_percentile, 100 - self.outlier_percentile)
+                        # percentile of yy_tmp
+                        #
+                        # set the boundary as [lo-1000*(hi-lo), hi+1000*(hi-lo)]
+                        # samples out of this boundary is considered as outlier and removed
+                        lo, hi = (
+                            yy_tmp.nanquantile(
+                                self.outlier_percentile / 100, dim=1, keepdim=True
+                            ),
+                            yy_tmp.nanquantile(
+                                1 - self.outlier_percentile / 100, dim=1, keepdim=True
+                            ),
+                        )
+                        lo, hi = lo - self.outlier_multiplier * (hi - lo), hi + self.outlier_multiplier * (hi - lo)
+                        mask = torch.logical_and(lo <= yy_tmp, yy_tmp <= hi)
+                    else:
+                        mask = ~yy_tmp.isnan()
+                    # plt.plot(yy_tmp[0, :].detach().cpu(), '+')
+                    # plt.title("Before discarding outliers.")
+                    # plt.show()
+                    # plt.plot((yy_tmp * mask)[0, :].detach().cpu(), '+')
+                    # plt.title("After discarding outliers.")
+                    # plt.show()
+                    yyy.append((yy_tmp.nan_to_num() * mask).sum(dim=1) / mask.sum(dim=1))
+                yy.append(torch.stack(yyy, dim=-1))
+                logging.info(f"Generated {batch_now + 1} out of {batches} batches with {time.time() - start} seconds.")
 
         return (
             torch.cat(xx, dim=0),
-            torch.cat(yy, dim=0),
+            torch.cat(yy, dim=0) if yy else None,
         )
 
     def gen_sample_for_p(self, gen_y=True, overtrain_rate=.5):
