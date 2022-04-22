@@ -1286,7 +1286,8 @@ class Net(torch.nn.Module):
                 train_p_start = time.time()
                 for epoch in range(self.epochs):
                     start = time.time()
-                    if epoch % 100 == 0:  # only generate in the beginning
+                    if epoch % self.epochs == 0:  # only generate in the beginning
+                        logging.info(f"Generating new samples at epoch {epoch:3.0f}.")
                         x, y = self.gen_sample_for_p()
                         poisson_rhs = 0
                         order = np.array([0] * self.dim)
