@@ -1410,9 +1410,9 @@ class Net(torch.nn.Module):
                 start = time.time()
                 predict = self(x, patch=p)
                 loss = self.loss(y, predict)
+                xx = x.T.detach().clone().requires_grad_(True)
                 if self.deriv_condition_coeff > 0:
                     self.eval()
-                    xx = x.T.detach().clone().requires_grad_(True)
                     grad = 0
                     for (idx, c) in zip(self.deriv_condition_zeta_map, self.deriv_condition_deriv_map):
                         # additional t coordinate
