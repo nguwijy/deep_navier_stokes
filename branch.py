@@ -33,16 +33,16 @@ class Net(torch.nn.Module):
         T=1.0,
         nu=0.5,
         branch_exponential_lambda=None,
-        neurons=20,
-        layers=5,
+        neurons=100,
+        layers=2,
         branch_lr=1e-2,
-        lr_milestones=[3000 // 2],
+        lr_milestones=[1000, 2000],
         lr_gamma=0.1,
         weight_decay=0,
         branch_nb_path_per_state=1000,
-        branch_nb_states=10,
-        branch_nb_states_per_batch=10,
-        epochs=3000,
+        branch_nb_states=100000,
+        branch_nb_states_per_batch=1000,
+        epochs=10000,
         batch_normalization=True,
         debug=False,
         antithetic=True,
@@ -1535,9 +1535,6 @@ if __name__ == "__main__":
     _, dim = deriv_map.shape
 
     def f_fun(y, i):
-        """
-        TODO: some descriptions about deriv_map...
-        """
         f = -y[i]
         for j in range(dim):
             f += -y[dim + j] * y[2 * dim + dim * i + j]
@@ -1608,24 +1605,7 @@ if __name__ == "__main__":
         x_lo=x_lo,
         x_hi=x_hi,
         device=device,
-        verbose=True,
-        epochs=10000,
-        branch_lr=1e-2,
-        lr_milestones=[1000, 2000],
-        lr_gamma=.1,
-        branch_nb_path_per_state=1000,
-        branch_nb_states=100000,
-        branch_nb_states_per_batch=1000,
-        beta=beta,
-        layers=2,
-        neurons=100,
-        batch_normalization=True,
-        debug=False,
-        branch_activation="tanh",
-        poisson_loss_coeff=0.,
-        deriv_condition_coeff=1.,
-        quantization=False,
-        fix_all_dim_except_first=False,
+        nu=nu,
         plot_y_lim=[[-1, 1], [-1, 1]] if problem == "taylor_green_2d" else [[-1, 0], [-1.05, 0.05], [-.55, .55]],
     )
     path_to_model = {
