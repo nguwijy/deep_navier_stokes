@@ -393,7 +393,7 @@ class Net(torch.nn.Module):
         t = np.linspace(self.t_lo, self.t_hi, nb_pts_time)
         arr = np.array(np.meshgrid(*([x]*self.dim + [t]))).T.reshape(-1, self.dim + 1)
         arr[:, [-1, 0]] = arr[:, [0, -1]]
-        arr = torch.tensor(arr, device=device, dtype=torch.get_default_dtype())
+        arr = torch.tensor(arr, device=self.device, dtype=torch.get_default_dtype())
         error = []
         nn = []
         cur, batch_size, last = 0, 100000, arr.shape[0]
