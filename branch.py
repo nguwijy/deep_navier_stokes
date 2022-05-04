@@ -31,7 +31,7 @@ class Net(torch.nn.Module):
         t_lo=0.0,
         t_hi=0.0,
         T=1.0,
-        beta=0.5,
+        nu=0.5,
         branch_exponential_lambda=None,
         neurons=20,
         layers=5,
@@ -186,7 +186,7 @@ class Net(torch.nn.Module):
         self.t_hi = t_lo if fix_all_dim_except_first else t_hi
         self.T = T
         self.tau_lo, self.tau_hi = 1e-5, 10  # for negative coordinate
-        self.beta = beta
+        self.nu = nu
         self.delta_t = (T - t_lo) / branch_patches
         self.outlier_percentile = outlier_percentile
         self.outlier_multiplier = outlier_multiplier
@@ -585,7 +585,7 @@ class Net(torch.nn.Module):
         dw = sqrt{dt} x Gaussian of size nb_states//2
         and return (dw, -dw)
         """
-        var = 2 * self.beta if var is None else var
+        var = 2 * self.nu if var is None else var
         if not torch.is_tensor(dt):
             dt = torch.tensor(dt)
         dt = dt.clip(min=0.0)  # so that we can safely take square root of dt
@@ -759,7 +759,7 @@ class Net(torch.nn.Module):
                             idx_counter += 1
 
                         elif coordinate == -2:
-                            # coordinate -2 -> apply code to \partial_t p + beta * \Delta p
+                            # coordinate -2 -> apply code to \partial_t p + nu * \Delta p
                             for k in range(self.dim + 2):
                                 mask_tmp = mask.bool() * (idx == idx_counter)
                                 if mask_tmp.any():
@@ -777,7 +777,7 @@ class Net(torch.nn.Module):
                                         A = -A * torch.log((dw ** 2).sum(dim=0).sqrt())
                                     code_increment = np.zeros_like(code)
                                     if k < self.dim:
-                                        A = 2 * self.beta * A
+                                        A = 2 * self.nu * A
                                         code_increment[k] += 1
                                     elif k == self.dim + 1:
                                         # the only difference between the last two k is the indexing of i, j
@@ -997,7 +997,7 @@ class Net(torch.nn.Module):
                                 T,
                                 x + dw,
                                 mask_tmp,
-                                -self.beta
+                                -self.nu
                                 * self.mechanism_tot_len
                                 * A
                                 * B
@@ -1473,9 +1473,9 @@ if __name__ == "__main__":
 
     if problem == "taylor_green_2d":
         # taylor green vortex
-        # T, x_lo, x_hi, beta = 10.0, 0, 2 * math.pi, .01
-        # T, x_lo, x_hi, beta = 1.0, 0, 2 * math.pi, .1
-        T, x_lo, x_hi, beta = 0.25, 0, 2 * math.pi, 1.0
+        # T, x_lo, x_hi, nu = 10.0, 0, 2 * math.pi, .01
+        # T, x_lo, x_hi, nu = 1.0, 0, 2 * math.pi, .1
+        T, x_lo, x_hi, nu = 0.25, 0, 2 * math.pi, 1.0
         # deriv_map is n x d array defining lambda_1, ..., lambda_n
         deriv_map = np.array(
             [
@@ -1499,8 +1499,8 @@ if __name__ == "__main__":
         deriv_condition_zeta_map = np.array([0, 1])
     elif problem == "abc_3d":
         # ABC flow
-        T, x_lo, x_hi, beta = 0.7, 0, 2 * math.pi, 0.01
-        # T, x_lo, x_hi, beta = 0.7, 0, 2 * math.pi, 0.0001
+        T, x_lo, x_hi, nu = 0.7, 0, 2 * math.pi, 0.01
+        # T, x_lo, x_hi, nu = 0.7, 0, 2 * math.pi, 0.0001
         A = B = C = 0.5
         # deriv_map is n x d array defining lambda_1, ..., lambda_n
         deriv_map = np.array(
@@ -1563,17 +1563,17 @@ if __name__ == "__main__":
         if problem == "taylor_green_2d":
             # taylor green vortex
             if i == 0:
-                return -torch.cos(x[:, 1]) * torch.sin(x[:, 2]) * torch.exp(-2 * beta * (T - x[:, 0]))
+                return -torch.cos(x[:, 1]) * torch.sin(x[:, 2]) * torch.exp(-2 * nu * (T - x[:, 0]))
             else:
-                return torch.sin(x[:, 1]) * torch.cos(x[:, 2]) * torch.exp(-2 * beta * (T - x[:, 0]))
+                return torch.sin(x[:, 1]) * torch.cos(x[:, 2]) * torch.exp(-2 * nu * (T - x[:, 0]))
         elif problem == "abc_3d":
             # ABC flow
             if i == 0:
-                return (A * torch.sin(x[:, 3]) + C * torch.cos(x[:, 2])) * torch.exp(-beta * (T - x[:, 0]))
+                return (A * torch.sin(x[:, 3]) + C * torch.cos(x[:, 2])) * torch.exp(-nu * (T - x[:, 0]))
             elif i == 1:
-                return (B * torch.sin(x[:, 1]) + A * torch.cos(x[:, 3])) * torch.exp(-beta * (T - x[:, 0]))
+                return (B * torch.sin(x[:, 1]) + A * torch.cos(x[:, 3])) * torch.exp(-nu * (T - x[:, 0]))
             else:
-                return (C * torch.sin(x[:, 2]) + B * torch.cos(x[:, 1])) * torch.exp(-beta * (T - x[:, 0]))
+                return (C * torch.sin(x[:, 2]) + B * torch.cos(x[:, 1])) * torch.exp(-nu * (T - x[:, 0]))
 
     def exact_p_fun(x):
         if problem == "taylor_green_2d":
@@ -1581,12 +1581,12 @@ if __name__ == "__main__":
             return (
                 -1
                 / 4
-                * torch.exp(-4 * beta * (T - x[:, 0]))
+                * torch.exp(-4 * nu * (T - x[:, 0]))
                 * (torch.cos(2 * x[:, 1]) + torch.cos(2 * x[:, 2]))
             )
         elif problem == "abc_3d":
             # ABC flow
-            return -torch.exp(-2 * beta * (T - x[:, 0])) * (
+            return -torch.exp(-2 * nu * (T - x[:, 0])) * (
                 A * C * torch.sin(x[:, 3]) * torch.cos(x[:, 2])
                 + B * A * torch.sin(x[:, 1]) * torch.cos(x[:, 3])
                 + C * B * torch.sin(x[:, 2]) * torch.cos(x[:, 1])
@@ -1630,22 +1630,22 @@ if __name__ == "__main__":
     )
     path_to_model = {
         # oldest version with only mc
-        "tg_1":    "logs/20220411-134639/model/epoch_2999.pt",  # taylor green, beta = 1, T = 0.25
-        "abc_1":   "logs/20220411-114948/model/epoch_2999.pt",  # abc, beta = .01, T = 0.7
+        "tg_1":    "logs/20220411-134639/model/epoch_2999.pt",  # taylor green, nu = 1, T = 0.25
+        "abc_1":   "logs/20220411-114948/model/epoch_2999.pt",  # abc, nu = .01, T = 0.7
         # mc with poisson loss for terminal p
-        "tg_2":    "logs/20220419-195647/model/epoch_2999.pt",  # taylor green, beta = 1/2, T = 0.25
-        "abc_2_1": "logs/20220419-203230/model/epoch_2999.pt",  # abc, beta = .01/2, T = 0.7
-        "abc_2_2": "logs/20220419-184732/model/epoch_2999.pt",  # abc, beta = .01/200, T = 0.7
+        "tg_2":    "logs/20220419-195647/model/epoch_2999.pt",  # taylor green, nu = 1/2, T = 0.25
+        "abc_2_1": "logs/20220419-203230/model/epoch_2999.pt",  # abc, nu = .01/2, T = 0.7
+        "abc_2_2": "logs/20220419-184732/model/epoch_2999.pt",  # abc, nu = .01/200, T = 0.7
         # mc with poisson loss for terminal p and divergence free loss for training u
-        "tg_3_1":  "logs/20220420-130200/model/epoch_2999.pt",  # taylor green, beta = 1/2, T = 0.25
-        "abc_3_1": "logs/20220420-133449/model/epoch_2999.pt",  # abc, beta = .01/2, T = 0.7
-        "abc_3_2": "logs/20220420-145854/model/epoch_2999.pt",  # abc, beta = .01/200, T = 0.7
+        "tg_3_1":  "logs/20220420-130200/model/epoch_2999.pt",  # taylor green, nu = 1/2, T = 0.25
+        "abc_3_1": "logs/20220420-133449/model/epoch_2999.pt",  # abc, nu = .01/2, T = 0.7
+        "abc_3_2": "logs/20220420-145854/model/epoch_2999.pt",  # abc, nu = .01/200, T = 0.7
         # mc with poisson loss for terminal p and divergence free loss for training u, epochs 3000 -> 10000
-        "tg_4_1":  "logs/20220421-214214/model/epoch_9999.pt",  # taylor green, beta = .01, T = 10
-        "tg_4_2":  "logs/20220421-231219/model/epoch_9999.pt",  # taylor green, beta = 1., T = .25
-        "tg_4_3":  "logs/20220422-000206/model/epoch_9999.pt",  # taylor green, beta = .1, T = 1
-        "abc_4_1": "logs/20220422-111431/model/epoch_9999.pt",  # abc, beta = .01, T = 0.7
-        "abc_3_2": "logs/20220422-135732/model/epoch_9999.pt",  # abc, beta = .0001, T = 0.7
+        "tg_4_1":  "logs/20220421-214214/model/epoch_9999.pt",  # taylor green, nu = .01, T = 10
+        "tg_4_2":  "logs/20220421-231219/model/epoch_9999.pt",  # taylor green, nu = 1., T = .25
+        "tg_4_3":  "logs/20220422-000206/model/epoch_9999.pt",  # taylor green, nu = .1, T = 1
+        "abc_4_1": "logs/20220422-111431/model/epoch_9999.pt",  # abc, nu = .01, T = 0.7
+        "abc_3_2": "logs/20220422-135732/model/epoch_9999.pt",  # abc, nu = .0001, T = 0.7
     }["tg_4_1"]
     # to continue training from somewhere or to debug some particular models
     # model.load_dict(path_to_model)
