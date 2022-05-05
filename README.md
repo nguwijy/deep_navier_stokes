@@ -19,8 +19,6 @@ We let
 <img src="https://latex.codecogs.com/svg.image?\alpha_6&space;=&space;1_2," />
 <img src="https://latex.codecogs.com/svg.image?\alpha_7&space;=&space;1_1," />
 <img src="https://latex.codecogs.com/svg.image?\alpha_8&space;=&space;1_2," />
-<img src="https://latex.codecogs.com/svg.image?\beta_1&space;=&space;0," />
-<img src="https://latex.codecogs.com/svg.image?\beta_2&space;=&space;0," />
 <img src="https://latex.codecogs.com/svg.image?\beta_3&space;=&space;1," />
 <img src="https://latex.codecogs.com/svg.image?\beta_4&space;=&space;2,"/>
 <img src="https://latex.codecogs.com/svg.image?\beta_5&space;=&space;1," />
@@ -147,6 +145,15 @@ model.train_and_eval()
 The resulting plot is available at /path/to/logs/plot/:\
 ![image](logs/20220421-231219/plot/u0/epoch_9999.png)
 ![image](logs/20220421-231219/plot/u1/epoch_9999.png)
+
+## Loading trained model
+Suppose we would like to load a trained model,
+either to reuse it or to study the neural function.
+We can do so using the `Net.load_dict()` function, i.e.
+```python
+model = Net(...)
+model.load_dict(/path/to/model/)
+```
 
 ## References
 <a id="nguwi2022deepbranching">[NPP22]</a>
