@@ -1,4 +1,11 @@
 # Deep branching solver for PDE system
+Authors: Jiang Yu Nguwi and Nicolas Privault.
+
+If this code is used for research purposes, please cite as \
+J.Y. Nguwi, G. Penent, and N. Privault.
+Numerical solution of the incompressible Navier-Stokes equation by deep branching.
+<br/><br/>
+
 Deep branching solver based on [[NPP22]](#nguwi2022deepbranching)
 aims to solve system of fully nonlinear PDE of the form\
 <img src="https://latex.codecogs.com/svg.image?0&space;=&space;\partial_t&space;u_i(t,x)&space;&plus;&space;\nu&space;\Delta&space;u_i(t,x)&space;&space;&space;&space;&plus;&space;f_i\big(&space;&space;&space;&space;\partial_{\alpha^1}u_0&space;(t,x)&space;&space;&space;&space;,&space;&space;&space;&space;\ldots&space;,&space;&space;&space;&space;\partial_{\alpha^q&space;}u_0&space;(t,x)&space;&space;&space;&space;,&space;&space;&space;&space;&space;&space;&space;&space;\partial_{\alpha^{q&plus;1}}u_{\beta^{q&plus;1}}(t,x)&space;&space;&space;&space;&space;&space;&space;&space;,&space;&space;&space;&space;&space;&space;&space;&space;\ldots&space;,&space;&space;&space;&space;&space;&space;&space;&space;&space;&space;&space;&space;&space;&space;&space;&space;&space;&space;&space;\partial_{\alpha^n}u_{\beta^n}(t,x)&space;\big)," />\
@@ -7,7 +14,8 @@ with\
 and\
 <img src="https://latex.codecogs.com/svg.image?u_i(T,x)&space;=&space;g_i&space;(x),\quad&space;(t,x)&space;=&space;(t,x_1,&space;\ldots,&space;x_d)&space;\in&space;[0,T]&space;\times&space;\mathbb{R}^d,\quad&space;i&space;=&space;1,\ldots&space;,&space;d." />
 
-We let
+We present the use of the deep branching solver
+with the particular example of
 <img src="http://latex.codecogs.com/svg.latex?d&space;=&space;2," />
 <img src="http://latex.codecogs.com/svg.latex?T&space;=&space;.25," />
 <img src="http://latex.codecogs.com/svg.latex?\nu&space;=&space;1," />
