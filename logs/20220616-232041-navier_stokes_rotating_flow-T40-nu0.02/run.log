@@ -1,0 +1,103 @@
+2022-06-16 23:20:41,948 | root |  INFO: Logs are saved in /home/nguwijy/deep_branching_with_domain/notebooks/logs/20220616-232041-navier_stokes_rotating_flow-T40-nu0.02
+2022-06-16 23:20:41,951 | root |  DEBUG: Current configuration: {'training': True, '_parameters': OrderedDict(), '_buffers': OrderedDict(), '_non_persistent_buffers_set': set(), '_backward_hooks': OrderedDict(), '_is_full_backward_hook': None, '_forward_hooks': OrderedDict(), '_forward_pre_hooks': OrderedDict(), '_state_dict_hooks': OrderedDict(), '_load_state_dict_pre_hooks': OrderedDict(), '_modules': OrderedDict([('u_layer', ModuleList(
+  (0): ModuleList(
+    (0): Linear(in_features=3, out_features=50, bias=True)
+    (1): Linear(in_features=50, out_features=50, bias=True)
+    (2): Linear(in_features=50, out_features=50, bias=True)
+    (3): Linear(in_features=50, out_features=50, bias=True)
+    (4): Linear(in_features=50, out_features=50, bias=True)
+    (5): Linear(in_features=50, out_features=50, bias=True)
+    (6): Linear(in_features=50, out_features=50, bias=True)
+    (7): Linear(in_features=50, out_features=2, bias=True)
+  )
+)), ('u_bn_layer', ModuleList(
+  (0): ModuleList(
+    (0): BatchNorm1d(3, eps=0.5, momentum=0.1, affine=False, track_running_stats=True)
+    (1): BatchNorm1d(50, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (2): BatchNorm1d(50, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (3): BatchNorm1d(50, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (4): BatchNorm1d(50, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (5): BatchNorm1d(50, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (6): BatchNorm1d(50, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (7): BatchNorm1d(50, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+)), ('p_layer', ModuleList(
+  (0): ModuleList(
+    (0): Linear(in_features=2, out_features=50, bias=True)
+    (1): Linear(in_features=50, out_features=50, bias=True)
+    (2): Linear(in_features=50, out_features=50, bias=True)
+    (3): Linear(in_features=50, out_features=50, bias=True)
+    (4): Linear(in_features=50, out_features=50, bias=True)
+    (5): Linear(in_features=50, out_features=50, bias=True)
+    (6): Linear(in_features=50, out_features=50, bias=True)
+    (7): Linear(in_features=50, out_features=1, bias=True)
+  )
+)), ('p_bn_layer', ModuleList(
+  (0): ModuleList(
+    (0): BatchNorm1d(2, eps=0.5, momentum=0.1, affine=False, track_running_stats=True)
+    (1): BatchNorm1d(50, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (2): BatchNorm1d(50, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (3): BatchNorm1d(50, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (4): BatchNorm1d(50, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (5): BatchNorm1d(50, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (6): BatchNorm1d(50, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (7): BatchNorm1d(50, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+)), ('loss', MSELoss()), ('activation', Softplus(beta=1, threshold=20))]), 'problem_name': 'navier_stokes_rotating_flow', 'f_fun': <function f_example at 0x7f2b81be95e0>, 'phi_fun': <function phi_example at 0x7f2b81be9430>, 'phi0': 0, 'conditional_probability_to_survive': <function Net.<lambda> at 0x7f2b91c5ad30>, 'is_x_inside': <function Net.<lambda> at 0x7f2b91c5ae50>, 'conditional_probability_to_survive_for_p': <function Net.<lambda> at 0x7f2b91c5adc0>, 'is_x_inside_for_p': <function Net.<lambda> at 0x7f2b91c5aee0>, 'deriv_map': array([[1, 0],
+       [0, 1],
+       [0, 0],
+       [0, 0],
+       [1, 0],
+       [0, 1],
+       [1, 0],
+       [0, 1]]), 'n': 8, 'dim_in': 2, 'zeta_map': array([-1, -1,  0,  1,  0,  0,  1,  1]), 'deriv_condition_deriv_map': array([[1, 0],
+       [0, 1]]), 'deriv_condition_zeta_map': array([0, 1]), 'dim_out': 2, 'nprime': 2, 'exact_p_fun': None, 'exact_p_fun_full': None, 'train_for_p': False, 'train_for_u': True, 'patches': 1, 'code': array([[-1, -1],
+       [-1, -1]]), 'coordinate': array([0, 1]), 'fdb_lookup': {(1, 0): [fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 0, 0, 1), l_and_k={(1, 0): [0, 0, 0, 0, 0, 0, 0, 1]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 0, 1, 0), l_and_k={(1, 0): [0, 0, 0, 0, 0, 0, 1, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 1, 0, 0), l_and_k={(1, 0): [0, 0, 0, 0, 0, 1, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 1, 0, 0, 0), l_and_k={(1, 0): [0, 0, 0, 0, 1, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 1, 0, 0, 0, 0), l_and_k={(1, 0): [0, 0, 0, 1, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 1, 0, 0, 0, 0, 0), l_and_k={(1, 0): [0, 0, 1, 0, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 1, 0, 0, 0, 0, 0, 0), l_and_k={(1, 0): [0, 1, 0, 0, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(1, 0, 0, 0, 0, 0, 0, 0), l_and_k={(1, 0): [1, 0, 0, 0, 0, 0, 0, 0]})], (0, 1): [fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 0, 0, 1), l_and_k={(0, 1): [0, 0, 0, 0, 0, 0, 0, 1]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 0, 1, 0), l_and_k={(0, 1): [0, 0, 0, 0, 0, 0, 1, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 1, 0, 0), l_and_k={(0, 1): [0, 0, 0, 0, 0, 1, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 1, 0, 0, 0), l_and_k={(0, 1): [0, 0, 0, 0, 1, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 1, 0, 0, 0, 0), l_and_k={(0, 1): [0, 0, 0, 1, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 1, 0, 0, 0, 0, 0), l_and_k={(0, 1): [0, 0, 1, 0, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 1, 0, 0, 0, 0, 0, 0), l_and_k={(0, 1): [0, 1, 0, 0, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(1, 0, 0, 0, 0, 0, 0, 0), l_and_k={(0, 1): [1, 0, 0, 0, 0, 0, 0, 0]})], (0, 0): [fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 0, 0, 0), l_and_k={})]}, 'fdb_runtime': 0.2048039436340332, 'mechanism_tot_len': 178, 'lr': 0.001, 'lr_milestones': [1000, 2000], 'lr_gamma': 0.8, 'weight_decay': 0, 'save_for_best_model': True, 'save_data': False, 'batch_normalization': True, 'nb_states': 100000, 'nb_states_per_batch': 1000, 'nb_path_per_state': 1000, 'x_lo': -3, 'x_hi': 3, 'adjusted_x_boundaries': (-3.0, 3.0), 'overtrain_rate_for_p': 0.5, 't_lo': 0.0, 't_hi': 40, 'T': 40, 'tau_lo': 1e-05, 'tau_hi': 10, 'nu': 0.02, 'delta_t': 40.0, 'outlier_percentile': 1, 'outlier_multiplier': 10, 'exponential_lambda': 0.0012823323596887644, 'bm_discretization_steps': 1, 'epochs': 10000, 'antithetic': True, 'div_condition_coeff': 0.0, 'poisson_coeff': 1.0, 'device': device(type='cuda'), 'verbose': True, 'fix_all_dim_except_first': False, 'fix_t_dim': False, 't_boundaries': tensor([40.,  0.], device='cuda:0'), 'adjusted_t_boundaries': [(tensor(0., device='cuda:0'), tensor(40., device='cuda:0'))], 'working_dir': 'logs/20220616-232041-navier_stokes_rotating_flow-T40-nu0.02', 'working_dir_full_path': '/home/nguwijy/deep_branching_with_domain/notebooks/logs/20220616-232041-navier_stokes_rotating_flow-T40-nu0.02'}
+2022-06-17 00:08:52,714 | root |  INFO: Patch 0: generation of u samples take 2890.761463880539 seconds.
+2022-06-17 00:08:52,731 | root |  INFO: Patch  0: epoch    0 with loss 1.53E-01
+2022-06-17 00:08:59,821 | root |  INFO: Patch  0: epoch  500 with loss 1.52E-01
+2022-06-17 00:09:06,684 | root |  INFO: Patch  0: epoch 1000 with loss 1.52E-01
+2022-06-17 00:09:13,547 | root |  INFO: Patch  0: epoch 1500 with loss 1.52E-01
+2022-06-17 00:09:20,416 | root |  INFO: Patch  0: epoch 2000 with loss 1.52E-01
+2022-06-17 00:09:28,689 | root |  INFO: Patch  0: epoch 2500 with loss 1.52E-01
+2022-06-17 00:09:35,044 | root |  INFO: Patch  0: epoch 3000 with loss 1.51E-01
+2022-06-17 00:09:41,625 | root |  INFO: Patch  0: epoch 3500 with loss 1.51E-01
+2022-06-17 00:09:48,176 | root |  INFO: Patch  0: epoch 4000 with loss 1.51E-01
+2022-06-17 00:09:54,725 | root |  INFO: Patch  0: epoch 4500 with loss 1.51E-01
+2022-06-17 00:10:01,249 | root |  INFO: Patch  0: epoch 5000 with loss 1.51E-01
+2022-06-17 00:10:07,673 | root |  INFO: Patch  0: epoch 5500 with loss 1.51E-01
+2022-06-17 00:10:14,046 | root |  INFO: Patch  0: epoch 6000 with loss 1.51E-01
+2022-06-17 00:10:20,521 | root |  INFO: Patch  0: epoch 6500 with loss 1.50E-01
+2022-06-17 00:10:27,068 | root |  INFO: Patch  0: epoch 7000 with loss 1.50E-01
+2022-06-17 00:10:33,601 | root |  INFO: Patch  0: epoch 7500 with loss 1.50E-01
+2022-06-17 00:10:40,271 | root |  INFO: Patch  0: epoch 8000 with loss 1.49E-01
+2022-06-17 00:10:46,811 | root |  INFO: Patch  0: epoch 8500 with loss 1.49E-01
+2022-06-17 00:10:53,355 | root |  INFO: Patch  0: epoch 9000 with loss 1.49E-01
+2022-06-17 00:10:59,810 | root |  INFO: Patch  0: epoch 9500 with loss 1.48E-01
+2022-06-17 00:11:06,249 | root |  INFO: Patch  0: epoch 9999 with loss 1.48E-01
+2022-06-17 00:11:06,268 | root |  INFO: Patch 0: training of u with 10000 epochs take 133.55292010307312 seconds.
+2022-06-17 00:11:06,322 | matplotlib.colorbar |  DEBUG: locator: <matplotlib.ticker.AutoLocator object at 0x7f2b7a934160>
+2022-06-17 00:11:06,654 | matplotlib.colorbar |  DEBUG: locator: <matplotlib.ticker.AutoLocator object at 0x7f2b2837b910>
+2022-06-17 00:11:06,888 | matplotlib.colorbar |  DEBUG: locator: <matplotlib.ticker.AutoLocator object at 0x7f2b29e588b0>
+2022-06-17 00:11:07,122 | matplotlib.colorbar |  DEBUG: locator: <matplotlib.ticker.AutoLocator object at 0x7f2b244b5a90>
+2022-06-17 00:11:07,360 | matplotlib.colorbar |  DEBUG: locator: <matplotlib.ticker.AutoLocator object at 0x7f2b70b24d00>
+2022-06-17 00:11:07,593 | matplotlib.colorbar |  DEBUG: locator: <matplotlib.ticker.AutoLocator object at 0x7f2b7041e7f0>
+2022-06-17 00:11:07,829 | matplotlib.colorbar |  DEBUG: locator: <matplotlib.ticker.AutoLocator object at 0x7f2b700bea30>
+2022-06-17 00:11:08,066 | matplotlib.colorbar |  DEBUG: locator: <matplotlib.ticker.AutoLocator object at 0x7f2b701291c0>
+2022-06-17 00:11:08,299 | matplotlib.colorbar |  DEBUG: locator: <matplotlib.ticker.AutoLocator object at 0x7f2b708ed8b0>
+2022-06-17 00:11:08,532 | matplotlib.colorbar |  DEBUG: locator: <matplotlib.ticker.AutoLocator object at 0x7f2b29d91310>
+2022-06-17 00:11:08,882 | matplotlib.colorbar |  DEBUG: locator: <matplotlib.ticker.AutoLocator object at 0x7f2b70943910>
+2022-06-17 00:11:09,116 | matplotlib.colorbar |  DEBUG: locator: <matplotlib.ticker.AutoLocator object at 0x7f2b70154280>
+2022-06-17 00:11:09,349 | matplotlib.colorbar |  DEBUG: locator: <matplotlib.ticker.AutoLocator object at 0x7f2b781991f0>
+2022-06-17 00:11:09,582 | matplotlib.colorbar |  DEBUG: locator: <matplotlib.ticker.AutoLocator object at 0x7f2b78257400>
+2022-06-17 00:11:09,815 | matplotlib.colorbar |  DEBUG: locator: <matplotlib.ticker.AutoLocator object at 0x7f2b781365b0>
+2022-06-17 00:11:10,048 | matplotlib.colorbar |  DEBUG: locator: <matplotlib.ticker.AutoLocator object at 0x7f2b7807b820>
+2022-06-17 00:11:10,280 | matplotlib.colorbar |  DEBUG: locator: <matplotlib.ticker.AutoLocator object at 0x7f2b709a9a90>
+2022-06-17 00:11:10,513 | matplotlib.colorbar |  DEBUG: locator: <matplotlib.ticker.AutoLocator object at 0x7f2b70645370>
+2022-06-17 00:11:10,744 | matplotlib.colorbar |  DEBUG: locator: <matplotlib.ticker.AutoLocator object at 0x7f2b242b3b20>
+2022-06-17 00:11:10,976 | matplotlib.colorbar |  DEBUG: locator: <matplotlib.ticker.AutoLocator object at 0x7f2b29ecf310>
+2022-06-17 00:11:11,208 | matplotlib.colorbar |  DEBUG: locator: <matplotlib.ticker.AutoLocator object at 0x7f2b2425aac0>
+2022-06-17 00:11:11,534 | matplotlib.colorbar |  DEBUG: locator: <matplotlib.ticker.AutoLocator object at 0x7f2b284942e0>
+2022-06-17 00:11:11,769 | matplotlib.colorbar |  DEBUG: locator: <matplotlib.ticker.AutoLocator object at 0x7f2b70a81a90>
+2022-06-17 00:11:12,108 | matplotlib.colorbar |  DEBUG: locator: <matplotlib.ticker.AutoLocator object at 0x7f2b28422b20>
+2022-06-17 00:11:12,236 | matplotlib.colorbar |  DEBUG: locator: <matplotlib.ticker.AutoLocator object at 0x7f2b701844c0>

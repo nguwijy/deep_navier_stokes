@@ -1,0 +1,221 @@
+2022-06-01 23:53:27,574 | root |  INFO: Logs are saved in /home/nguwijy/tmp/deep_branching_with_domain/logs/20220601-235327-abc_3d-T0.7-nu0.02
+2022-06-01 23:53:27,578 | root |  DEBUG: Current configuration: {'training': True, '_parameters': OrderedDict(), '_buffers': OrderedDict(), '_non_persistent_buffers_set': set(), '_backward_hooks': OrderedDict(), '_is_full_backward_hook': None, '_forward_hooks': OrderedDict(), '_forward_pre_hooks': OrderedDict(), '_state_dict_hooks': OrderedDict(), '_load_state_dict_pre_hooks': OrderedDict(), '_modules': OrderedDict([('u_layer', ModuleList(
+  (0): ModuleList(
+    (0): Linear(in_features=4, out_features=100, bias=True)
+    (1): Linear(in_features=100, out_features=100, bias=True)
+    (2): Linear(in_features=100, out_features=100, bias=True)
+    (3): Linear(in_features=100, out_features=3, bias=True)
+  )
+)), ('u_bn_layer', ModuleList(
+  (0): ModuleList(
+    (0): BatchNorm1d(4, eps=0.5, momentum=0.1, affine=False, track_running_stats=True)
+    (1): BatchNorm1d(100, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (2): BatchNorm1d(100, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (3): BatchNorm1d(100, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+)), ('p_layer', ModuleList(
+  (0): ModuleList(
+    (0): Linear(in_features=3, out_features=100, bias=True)
+    (1): Linear(in_features=100, out_features=100, bias=True)
+    (2): Linear(in_features=100, out_features=100, bias=True)
+    (3): Linear(in_features=100, out_features=1, bias=True)
+  )
+)), ('p_bn_layer', ModuleList(
+  (0): ModuleList(
+    (0): BatchNorm1d(3, eps=0.5, momentum=0.1, affine=False, track_running_stats=True)
+    (1): BatchNorm1d(100, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (2): BatchNorm1d(100, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+    (3): BatchNorm1d(100, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  )
+)), ('loss', MSELoss()), ('activation', Tanh())]), 'problem_name': 'abc_3d', 'f_fun': <function f_example at 0x7efcd836e670>, 'phi_fun': <function phi_example at 0x7efcd836e8b0>, 'phi0': 0, 'conditional_probability_to_survive': <function Net.<lambda> at 0x7efce3bc8ca0>, 'is_x_inside': <function Net.<lambda> at 0x7efce3bc8dc0>, 'conditional_probability_to_survive_for_p': <function Net.<lambda> at 0x7efce3bc8d30>, 'is_x_inside_for_p': <function Net.<lambda> at 0x7efce3bc8e50>, 'deriv_map': array([[1, 0, 0],
+       [0, 1, 0],
+       [0, 0, 1],
+       [0, 0, 0],
+       [0, 0, 0],
+       [0, 0, 0],
+       [1, 0, 0],
+       [0, 1, 0],
+       [0, 0, 1],
+       [1, 0, 0],
+       [0, 1, 0],
+       [0, 0, 1],
+       [1, 0, 0],
+       [0, 1, 0],
+       [0, 0, 1]]), 'n': 15, 'dim_in': 3, 'zeta_map': array([-1, -1, -1,  0,  1,  2,  0,  0,  0,  1,  1,  1,  2,  2,  2]), 'deriv_condition_deriv_map': array([[1, 0, 0],
+       [0, 1, 0],
+       [0, 0, 1]]), 'deriv_condition_zeta_map': array([0, 1, 2]), 'dim_out': 3, 'nprime': 3, 'exact_p_fun': None, 'train_for_p': True, 'train_for_u': True, 'patches': 1, 'code': array([[-1, -1, -1],
+       [-1, -1, -1],
+       [-1, -1, -1]]), 'coordinate': array([0, 1, 2]), 'fdb_lookup': {(1, 0, 0): [fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1), l_and_k={(1, 0, 0): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0), l_and_k={(1, 0, 0): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0), l_and_k={(1, 0, 0): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0), l_and_k={(1, 0, 0): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0), l_and_k={(1, 0, 0): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0), l_and_k={(1, 0, 0): [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0), l_and_k={(1, 0, 0): [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0), l_and_k={(1, 0, 0): [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0), l_and_k={(1, 0, 0): [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0), l_and_k={(1, 0, 0): [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), l_and_k={(1, 0, 0): [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), l_and_k={(1, 0, 0): [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), l_and_k={(1, 0, 0): [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), l_and_k={(1, 0, 0): [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), l_and_k={(1, 0, 0): [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]})], (0, 1, 0): [fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1), l_and_k={(0, 1, 0): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0), l_and_k={(0, 1, 0): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0), l_and_k={(0, 1, 0): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0), l_and_k={(0, 1, 0): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0), l_and_k={(0, 1, 0): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0), l_and_k={(0, 1, 0): [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0), l_and_k={(0, 1, 0): [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0), l_and_k={(0, 1, 0): [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0), l_and_k={(0, 1, 0): [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0), l_and_k={(0, 1, 0): [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), l_and_k={(0, 1, 0): [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), l_and_k={(0, 1, 0): [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), l_and_k={(0, 1, 0): [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), l_and_k={(0, 1, 0): [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), l_and_k={(0, 1, 0): [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]})], (0, 0, 1): [fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1), l_and_k={(0, 0, 1): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0), l_and_k={(0, 0, 1): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0), l_and_k={(0, 0, 1): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0), l_and_k={(0, 0, 1): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0), l_and_k={(0, 0, 1): [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0), l_and_k={(0, 0, 1): [0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0), l_and_k={(0, 0, 1): [0, 0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0), l_and_k={(0, 0, 1): [0, 0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0), l_and_k={(0, 0, 1): [0, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0), l_and_k={(0, 0, 1): [0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), l_and_k={(0, 0, 1): [0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), l_and_k={(0, 0, 1): [0, 0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), l_and_k={(0, 0, 1): [0, 0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), l_and_k={(0, 0, 1): [0, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}), fdb(coeff=1, lamb=(1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), l_and_k={(0, 0, 1): [1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]})], (0, 0, 0): [fdb(coeff=1, lamb=(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0), l_and_k={})]}, 'fdb_runtime': 0.13515138626098633, 'mechanism_tot_len': 858, 'lr': 0.01, 'lr_milestones': [1000, 2000], 'lr_gamma': 0.1, 'weight_decay': 0, 'save_for_best_model': False, 'save_data': False, 'batch_normalization': True, 'nb_states': 100000, 'nb_states_per_batch': 1000, 'nb_path_per_state': 1000, 'x_lo': 0, 'x_hi': 6.283185307179586, 'adjusted_x_boundaries': (-0.6283185307179586, 6.911503837897545), 'overtrain_rate_for_p': 0.5, 't_lo': 0.0, 't_hi': 0.7, 'T': 0.7, 'tau_lo': 1e-05, 'tau_hi': 10, 'nu': 0.02, 'delta_t': 0.7, 'outlier_percentile': 1, 'outlier_multiplier': 10, 'exponential_lambda': 0.07327613483935798, 'epochs': 10000, 'antithetic': True, 'div_condition_coeff': 1.0, 'poisson_coeff': 1.0, 'device': device(type='cuda'), 'verbose': True, 'fix_all_dim_except_first': False, 'fix_t_dim': False, 't_boundaries': tensor([0.7000, 0.0000], device='cuda:0'), 'adjusted_t_boundaries': [(tensor(0., device='cuda:0'), tensor(0.7000, device='cuda:0'))], 'working_dir': 'logs/20220601-235327-abc_3d-T0.7-nu0.02'}
+2022-06-01 23:53:27,595 | root |  DEBUG: Generated 1 out of 100000 batches with 0.01466679573059082 seconds.
+2022-06-01 23:53:37,741 | root |  DEBUG: Generated 1001 out of 100000 batches with 10.145614862442017 seconds.
+2022-06-01 23:53:48,000 | root |  DEBUG: Generated 2001 out of 100000 batches with 10.258996963500977 seconds.
+2022-06-01 23:53:58,284 | root |  DEBUG: Generated 3001 out of 100000 batches with 10.283404350280762 seconds.
+2022-06-01 23:54:08,565 | root |  DEBUG: Generated 4001 out of 100000 batches with 10.280083894729614 seconds.
+2022-06-01 23:54:18,878 | root |  DEBUG: Generated 5001 out of 100000 batches with 10.311256170272827 seconds.
+2022-06-01 23:54:29,181 | root |  DEBUG: Generated 6001 out of 100000 batches with 10.30220913887024 seconds.
+2022-06-01 23:54:39,477 | root |  DEBUG: Generated 7001 out of 100000 batches with 10.294366121292114 seconds.
+2022-06-01 23:54:49,815 | root |  DEBUG: Generated 8001 out of 100000 batches with 10.336719036102295 seconds.
+2022-06-01 23:55:00,196 | root |  DEBUG: Generated 9001 out of 100000 batches with 10.379030704498291 seconds.
+2022-06-01 23:55:10,501 | root |  DEBUG: Generated 10001 out of 100000 batches with 10.302510499954224 seconds.
+2022-06-01 23:55:20,778 | root |  DEBUG: Generated 11001 out of 100000 batches with 10.274599552154541 seconds.
+2022-06-01 23:55:31,132 | root |  DEBUG: Generated 12001 out of 100000 batches with 10.354169845581055 seconds.
+2022-06-01 23:55:41,503 | root |  DEBUG: Generated 13001 out of 100000 batches with 10.369405031204224 seconds.
+2022-06-01 23:55:51,949 | root |  DEBUG: Generated 14001 out of 100000 batches with 10.442372798919678 seconds.
+2022-06-01 23:56:02,284 | root |  DEBUG: Generated 15001 out of 100000 batches with 10.334076404571533 seconds.
+2022-06-01 23:56:12,697 | root |  DEBUG: Generated 16001 out of 100000 batches with 10.405475378036499 seconds.
+2022-06-01 23:56:23,083 | root |  DEBUG: Generated 17001 out of 100000 batches with 10.383551359176636 seconds.
+2022-06-01 23:56:33,457 | root |  DEBUG: Generated 18001 out of 100000 batches with 10.369687557220459 seconds.
+2022-06-01 23:56:43,759 | root |  DEBUG: Generated 19001 out of 100000 batches with 10.298694133758545 seconds.
+2022-06-01 23:56:54,160 | root |  DEBUG: Generated 20001 out of 100000 batches with 10.399877071380615 seconds.
+2022-06-01 23:57:04,538 | root |  DEBUG: Generated 21001 out of 100000 batches with 10.375609874725342 seconds.
+2022-06-01 23:57:14,870 | root |  DEBUG: Generated 22001 out of 100000 batches with 10.328282117843628 seconds.
+2022-06-01 23:57:25,255 | root |  DEBUG: Generated 23001 out of 100000 batches with 10.378721475601196 seconds.
+2022-06-01 23:57:35,635 | root |  DEBUG: Generated 24001 out of 100000 batches with 10.374515295028687 seconds.
+2022-06-01 23:57:46,036 | root |  DEBUG: Generated 25001 out of 100000 batches with 10.397613525390625 seconds.
+2022-06-01 23:57:56,359 | root |  DEBUG: Generated 26001 out of 100000 batches with 10.31894564628601 seconds.
+2022-06-01 23:58:06,682 | root |  DEBUG: Generated 27001 out of 100000 batches with 10.322625875473022 seconds.
+2022-06-01 23:58:17,018 | root |  DEBUG: Generated 28001 out of 100000 batches with 10.32947063446045 seconds.
+2022-06-01 23:58:27,465 | root |  DEBUG: Generated 29001 out of 100000 batches with 10.442928791046143 seconds.
+2022-06-01 23:58:37,767 | root |  DEBUG: Generated 30001 out of 100000 batches with 10.298961877822876 seconds.
+2022-06-01 23:58:47,851 | root |  DEBUG: Generated 31001 out of 100000 batches with 10.076594114303589 seconds.
+2022-06-01 23:58:57,985 | root |  DEBUG: Generated 32001 out of 100000 batches with 10.127351522445679 seconds.
+2022-06-01 23:59:08,401 | root |  DEBUG: Generated 33001 out of 100000 batches with 10.412934064865112 seconds.
+2022-06-01 23:59:18,057 | root |  DEBUG: Generated 34001 out of 100000 batches with 9.653200149536133 seconds.
+2022-06-01 23:59:27,616 | root |  DEBUG: Generated 35001 out of 100000 batches with 9.552199840545654 seconds.
+2022-06-01 23:59:37,230 | root |  DEBUG: Generated 36001 out of 100000 batches with 9.606679439544678 seconds.
+2022-06-01 23:59:46,895 | root |  DEBUG: Generated 37001 out of 100000 batches with 9.661674976348877 seconds.
+2022-06-01 23:59:56,473 | root |  DEBUG: Generated 38001 out of 100000 batches with 9.575541019439697 seconds.
+2022-06-02 00:00:06,039 | root |  DEBUG: Generated 39001 out of 100000 batches with 9.559035301208496 seconds.
+2022-06-02 00:00:15,677 | root |  DEBUG: Generated 40001 out of 100000 batches with 9.629538774490356 seconds.
+2022-06-02 00:00:25,280 | root |  DEBUG: Generated 41001 out of 100000 batches with 9.600488662719727 seconds.
+2022-06-02 00:00:34,983 | root |  DEBUG: Generated 42001 out of 100000 batches with 9.70258378982544 seconds.
+2022-06-02 00:00:44,526 | root |  DEBUG: Generated 43001 out of 100000 batches with 9.535273790359497 seconds.
+2022-06-02 00:00:54,100 | root |  DEBUG: Generated 44001 out of 100000 batches with 9.566120624542236 seconds.
+2022-06-02 00:01:03,662 | root |  DEBUG: Generated 45001 out of 100000 batches with 9.561301708221436 seconds.
+2022-06-02 00:01:13,276 | root |  DEBUG: Generated 46001 out of 100000 batches with 9.605695247650146 seconds.
+2022-06-02 00:01:22,810 | root |  DEBUG: Generated 47001 out of 100000 batches with 9.526344537734985 seconds.
+2022-06-02 00:01:32,345 | root |  DEBUG: Generated 48001 out of 100000 batches with 9.527523040771484 seconds.
+2022-06-02 00:01:41,886 | root |  DEBUG: Generated 49001 out of 100000 batches with 9.540241479873657 seconds.
+2022-06-02 00:01:51,519 | root |  DEBUG: Generated 50001 out of 100000 batches with 9.625281572341919 seconds.
+2022-06-02 00:02:01,740 | root |  DEBUG: Generated 51001 out of 100000 batches with 10.214155912399292 seconds.
+2022-06-02 00:02:12,090 | root |  DEBUG: Generated 52001 out of 100000 batches with 10.347344636917114 seconds.
+2022-06-02 00:02:22,508 | root |  DEBUG: Generated 53001 out of 100000 batches with 10.410025358200073 seconds.
+2022-06-02 00:02:32,983 | root |  DEBUG: Generated 54001 out of 100000 batches with 10.467406511306763 seconds.
+2022-06-02 00:02:42,649 | root |  DEBUG: Generated 55001 out of 100000 batches with 9.659604549407959 seconds.
+2022-06-02 00:02:52,165 | root |  DEBUG: Generated 56001 out of 100000 batches with 9.513172388076782 seconds.
+2022-06-02 00:03:01,776 | root |  DEBUG: Generated 57001 out of 100000 batches with 9.602479934692383 seconds.
+2022-06-02 00:03:11,421 | root |  DEBUG: Generated 58001 out of 100000 batches with 9.637730360031128 seconds.
+2022-06-02 00:03:21,066 | root |  DEBUG: Generated 59001 out of 100000 batches with 9.639836072921753 seconds.
+2022-06-02 00:03:30,810 | root |  DEBUG: Generated 60001 out of 100000 batches with 9.736304521560669 seconds.
+2022-06-02 00:03:40,456 | root |  DEBUG: Generated 61001 out of 100000 batches with 9.638708114624023 seconds.
+2022-06-02 00:03:50,157 | root |  DEBUG: Generated 62001 out of 100000 batches with 9.694363594055176 seconds.
+2022-06-02 00:03:59,722 | root |  DEBUG: Generated 63001 out of 100000 batches with 9.560555458068848 seconds.
+2022-06-02 00:04:09,461 | root |  DEBUG: Generated 64001 out of 100000 batches with 9.73079776763916 seconds.
+2022-06-02 00:04:19,893 | root |  DEBUG: Generated 65001 out of 100000 batches with 10.424937725067139 seconds.
+2022-06-02 00:04:30,350 | root |  DEBUG: Generated 66001 out of 100000 batches with 10.451410293579102 seconds.
+2022-06-02 00:04:40,128 | root |  DEBUG: Generated 67001 out of 100000 batches with 9.774147748947144 seconds.
+2022-06-02 00:04:49,673 | root |  DEBUG: Generated 68001 out of 100000 batches with 9.536921977996826 seconds.
+2022-06-02 00:04:59,309 | root |  DEBUG: Generated 69001 out of 100000 batches with 9.62815237045288 seconds.
+2022-06-02 00:05:08,956 | root |  DEBUG: Generated 70001 out of 100000 batches with 9.642478466033936 seconds.
+2022-06-02 00:05:18,515 | root |  DEBUG: Generated 71001 out of 100000 batches with 9.555565357208252 seconds.
+2022-06-02 00:05:28,532 | root |  DEBUG: Generated 72001 out of 100000 batches with 10.009209394454956 seconds.
+2022-06-02 00:05:38,209 | root |  DEBUG: Generated 73001 out of 100000 batches with 9.669395685195923 seconds.
+2022-06-02 00:05:47,924 | root |  DEBUG: Generated 74001 out of 100000 batches with 9.710358381271362 seconds.
+2022-06-02 00:05:57,490 | root |  DEBUG: Generated 75001 out of 100000 batches with 9.562278509140015 seconds.
+2022-06-02 00:06:07,056 | root |  DEBUG: Generated 76001 out of 100000 batches with 9.559454441070557 seconds.
+2022-06-02 00:06:16,689 | root |  DEBUG: Generated 77001 out of 100000 batches with 9.624645709991455 seconds.
+2022-06-02 00:06:26,326 | root |  DEBUG: Generated 78001 out of 100000 batches with 9.63408088684082 seconds.
+2022-06-02 00:06:35,910 | root |  DEBUG: Generated 79001 out of 100000 batches with 9.581276178359985 seconds.
+2022-06-02 00:06:45,506 | root |  DEBUG: Generated 80001 out of 100000 batches with 9.58798623085022 seconds.
+2022-06-02 00:06:55,494 | root |  DEBUG: Generated 81001 out of 100000 batches with 9.980392694473267 seconds.
+2022-06-02 00:07:05,928 | root |  DEBUG: Generated 82001 out of 100000 batches with 10.430546283721924 seconds.
+2022-06-02 00:07:15,537 | root |  DEBUG: Generated 83001 out of 100000 batches with 9.607893228530884 seconds.
+2022-06-02 00:07:25,080 | root |  DEBUG: Generated 84001 out of 100000 batches with 9.540126323699951 seconds.
+2022-06-02 00:07:34,670 | root |  DEBUG: Generated 85001 out of 100000 batches with 9.582531213760376 seconds.
+2022-06-02 00:07:44,278 | root |  DEBUG: Generated 86001 out of 100000 batches with 9.605832815170288 seconds.
+2022-06-02 00:07:53,916 | root |  DEBUG: Generated 87001 out of 100000 batches with 9.62965726852417 seconds.
+2022-06-02 00:08:03,698 | root |  DEBUG: Generated 88001 out of 100000 batches with 9.7744300365448 seconds.
+2022-06-02 00:08:14,112 | root |  DEBUG: Generated 89001 out of 100000 batches with 10.412545680999756 seconds.
+2022-06-02 00:08:24,510 | root |  DEBUG: Generated 90001 out of 100000 batches with 10.397906303405762 seconds.
+2022-06-02 00:08:34,970 | root |  DEBUG: Generated 91001 out of 100000 batches with 10.451347589492798 seconds.
+2022-06-02 00:08:45,428 | root |  DEBUG: Generated 92001 out of 100000 batches with 10.451167583465576 seconds.
+2022-06-02 00:08:55,787 | root |  DEBUG: Generated 93001 out of 100000 batches with 10.35474944114685 seconds.
+2022-06-02 00:09:06,199 | root |  DEBUG: Generated 94001 out of 100000 batches with 10.403961420059204 seconds.
+2022-06-02 00:09:16,675 | root |  DEBUG: Generated 95001 out of 100000 batches with 10.467768669128418 seconds.
+2022-06-02 00:09:27,068 | root |  DEBUG: Generated 96001 out of 100000 batches with 10.393066644668579 seconds.
+2022-06-02 00:09:37,430 | root |  DEBUG: Generated 97001 out of 100000 batches with 10.361391544342041 seconds.
+2022-06-02 00:09:47,843 | root |  DEBUG: Generated 98001 out of 100000 batches with 10.404861211776733 seconds.
+2022-06-02 00:09:58,311 | root |  DEBUG: Generated 99001 out of 100000 batches with 10.46103024482727 seconds.
+2022-06-02 00:10:08,704 | root |  DEBUG: Generated 100000 out of 100000 batches with 10.387622117996216 seconds.
+2022-06-02 00:10:09,203 | root |  INFO: Patch 0: generation of p samples take 1001.6222875118256 seconds.
+2022-06-02 00:10:09,453 | root |  INFO: Patch  0: epoch    0 with loss 9.92E-01
+2022-06-02 00:11:01,072 | root |  INFO: Patch  0: epoch  500 with loss 1.10E-02
+2022-06-02 00:11:52,756 | root |  INFO: Patch  0: epoch 1000 with loss 3.28E-02
+2022-06-02 00:12:44,409 | root |  INFO: Patch  0: epoch 1500 with loss 2.53E-03
+2022-06-02 00:13:36,068 | root |  INFO: Patch  0: epoch 2000 with loss 2.07E-03
+2022-06-02 00:14:30,736 | root |  INFO: Patch  0: epoch 2500 with loss 2.10E-03
+2022-06-02 00:15:25,376 | root |  INFO: Patch  0: epoch 3000 with loss 2.05E-03
+2022-06-02 00:16:20,083 | root |  INFO: Patch  0: epoch 3500 with loss 1.97E-03
+2022-06-02 00:17:14,746 | root |  INFO: Patch  0: epoch 4000 with loss 1.88E-03
+2022-06-02 00:18:09,467 | root |  INFO: Patch  0: epoch 4500 with loss 1.76E-03
+2022-06-02 00:19:04,129 | root |  INFO: Patch  0: epoch 5000 with loss 1.61E-03
+2022-06-02 00:19:58,807 | root |  INFO: Patch  0: epoch 5500 with loss 1.47E-03
+2022-06-02 00:20:53,447 | root |  INFO: Patch  0: epoch 6000 with loss 1.32E-03
+2022-06-02 00:21:48,298 | root |  INFO: Patch  0: epoch 6500 with loss 1.16E-03
+2022-06-02 00:22:43,052 | root |  INFO: Patch  0: epoch 7000 with loss 1.00E-03
+2022-06-02 00:23:37,704 | root |  INFO: Patch  0: epoch 7500 with loss 8.54E-04
+2022-06-02 00:24:32,371 | root |  INFO: Patch  0: epoch 8000 with loss 7.24E-04
+2022-06-02 00:25:27,014 | root |  INFO: Patch  0: epoch 8500 with loss 6.19E-04
+2022-06-02 00:26:21,681 | root |  INFO: Patch  0: epoch 9000 with loss 5.31E-04
+2022-06-02 00:27:16,309 | root |  INFO: Patch  0: epoch 9500 with loss 4.71E-04
+2022-06-02 00:28:10,863 | root |  INFO: Patch  0: epoch 9999 with loss 4.09E-04
+2022-06-02 00:28:10,876 | root |  INFO: Patch0: pre-training of p with 10000 epochs takes 1082 seconds.
+2022-06-02 01:24:04,461 | root |  INFO: Patch 0: generation of u samples take 3353.5839006900787 seconds.
+2022-06-02 01:24:04,511 | root |  INFO: Patch  0: epoch    0 with loss 9.63E-01
+2022-06-02 01:24:26,743 | root |  INFO: Patch  0: epoch  500 with loss 1.30E-03
+2022-06-02 01:24:49,029 | root |  INFO: Patch  0: epoch 1000 with loss 4.45E-04
+2022-06-02 01:25:11,345 | root |  INFO: Patch  0: epoch 1500 with loss 3.92E-04
+2022-06-02 01:25:33,678 | root |  INFO: Patch  0: epoch 2000 with loss 3.45E-04
+2022-06-02 01:25:56,339 | root |  INFO: Patch  0: epoch 2500 with loss 3.40E-04
+2022-06-02 01:26:18,978 | root |  INFO: Patch  0: epoch 3000 with loss 3.33E-04
+2022-06-02 01:26:41,622 | root |  INFO: Patch  0: epoch 3500 with loss 3.24E-04
+2022-06-02 01:27:04,266 | root |  INFO: Patch  0: epoch 4000 with loss 3.14E-04
+2022-06-02 01:27:26,919 | root |  INFO: Patch  0: epoch 4500 with loss 3.01E-04
+2022-06-02 01:27:49,586 | root |  INFO: Patch  0: epoch 5000 with loss 2.86E-04
+2022-06-02 01:28:12,292 | root |  INFO: Patch  0: epoch 5500 with loss 2.69E-04
+2022-06-02 01:28:34,973 | root |  INFO: Patch  0: epoch 6000 with loss 2.49E-04
+2022-06-02 01:28:57,624 | root |  INFO: Patch  0: epoch 6500 with loss 2.27E-04
+2022-06-02 01:29:20,268 | root |  INFO: Patch  0: epoch 7000 with loss 2.03E-04
+2022-06-02 01:29:42,911 | root |  INFO: Patch  0: epoch 7500 with loss 1.79E-04
+2022-06-02 01:30:05,601 | root |  INFO: Patch  0: epoch 8000 with loss 1.54E-04
+2022-06-02 01:30:28,259 | root |  INFO: Patch  0: epoch 8500 with loss 1.30E-04
+2022-06-02 01:30:50,927 | root |  INFO: Patch  0: epoch 9000 with loss 1.08E-04
+2022-06-02 01:31:13,598 | root |  INFO: Patch  0: epoch 9500 with loss 8.88E-05
+2022-06-02 01:31:36,217 | root |  INFO: Patch  0: epoch 9999 with loss 7.41E-05
+2022-06-02 01:31:36,231 | root |  INFO: Patch 0: training of u with 10000 epochs take 451.7685341835022 seconds.
+2022-06-02 01:31:37,091 | root |  INFO: The error as in Lejay is calculated as follows.
+2022-06-02 01:31:37,094 | root |  INFO: $\hat{e}_0(t_k)$
+2022-06-02 01:31:37,190 | root |  INFO: & 7.45E-04 & 5.52E-04 & 4.65E-04 & 4.13E-04 & 3.66E-04 & 3.34E-04 & 3.12E-04 & 3.26E-04 & 3.70E-04 & 4.41E-04 & --- \\
+2022-06-02 01:31:37,191 | root |  INFO: $\hat{e}_1(t_k)$
+2022-06-02 01:31:37,193 | root |  INFO: & 8.36E-04 & 7.05E-04 & 5.92E-04 & 5.06E-04 & 4.28E-04 & 4.05E-04 & 4.13E-04 & 4.75E-04 & 5.73E-04 & 7.10E-04 & --- \\
+2022-06-02 01:31:37,193 | root |  INFO: $\hat{e}_2(t_k)$
+2022-06-02 01:31:37,195 | root |  INFO: & 8.56E-04 & 6.93E-04 & 5.51E-04 & 4.33E-04 & 4.20E-04 & 4.69E-04 & 4.99E-04 & 5.23E-04 & 5.36E-04 & 5.27E-04 & --- \\
+2022-06-02 01:31:37,197 | root |  INFO: $\hat{e}(t_k)$
+2022-06-02 01:31:37,199 | root |  INFO: & 1.21E-03 & 9.20E-04 & 7.94E-04 & 7.60E-04 & 7.18E-04 & 7.09E-04 & 6.95E-04 & 7.14E-04 & 7.39E-04 & 8.00E-04 & --- \\
+2022-06-02 01:31:37,200 | root |  INFO: \hline
+2022-06-02 01:31:37,200 | root |  INFO: 
+The relative L2 error of u (erru) is calculated as follows.
+2022-06-02 01:31:37,203 | root |  INFO: erru($t_k$)
+2022-06-02 01:31:37,213 | root |  INFO: & 1.36E-02 & 1.20E-02 & 1.11E-02 & 1.07E-02 & 1.04E-02 & 1.03E-02 & 1.03E-02 & 1.03E-02 & 1.06E-02 & 1.13E-02 & --- \\
+2022-06-02 01:31:38,189 | root |  INFO: 
+The relative L2 error of gradient of u (errgu) is calculated as follows.
+2022-06-02 01:31:38,204 | root |  INFO: errgu($t_k$)
+2022-06-02 01:31:38,464 | root |  INFO: & 4.49E-02 & 4.30E-02 & 4.16E-02 & 4.07E-02 & 4.01E-02 & 3.97E-02 & 3.96E-02 & 3.97E-02 & 4.01E-02 & 4.10E-02 & --- \\
+2022-06-02 01:31:38,465 | root |  INFO: 
+The absolute divergence of u (errdivu) is calculated as follows.
+2022-06-02 01:31:38,466 | root |  INFO: errdivu($t_k$)
+2022-06-02 01:31:38,471 | root |  INFO: & 7.71E-02 & 6.65E-02 & 6.06E-02 & 5.78E-02 & 5.66E-02 & 5.57E-02 & 5.51E-02 & 5.55E-02 & 5.83E-02 & 6.52E-02 & --- \\
+2022-06-02 01:31:38,547 | root |  INFO: 
+The relative L2 error of p (errp) is calculated as follows.
+2022-06-02 01:31:38,550 | root |  INFO: errp($t_k$)
+2022-06-02 01:31:38,558 | root |  INFO: & --- & --- & --- & --- & --- & --- & --- & --- & --- & --- & 1.79E-02 \\
