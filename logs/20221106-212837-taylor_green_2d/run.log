@@ -1,0 +1,56 @@
+2022-11-06 21:28:37,503 | root |  INFO: Logs are saved in /home/nguwijy/repo/deep_branching_with_domain/notebooks/logs/20221106-212837-taylor_green_2d
+2022-11-06 21:28:38,315 | root |  DEBUG: Current configuration: {'training': True, '_parameters': OrderedDict(), '_buffers': OrderedDict(), '_non_persistent_buffers_set': set(), '_backward_hooks': OrderedDict(), '_is_full_backward_hook': None, '_forward_hooks': OrderedDict(), '_forward_pre_hooks': OrderedDict(), '_state_dict_hooks': OrderedDict(), '_load_state_dict_pre_hooks': OrderedDict(), '_modules': OrderedDict([('u_layer', ModuleList(
+  (0): Linear(in_features=3, out_features=20, bias=True)
+  (1): Linear(in_features=20, out_features=20, bias=True)
+  (2): Linear(in_features=20, out_features=20, bias=True)
+  (3): Linear(in_features=20, out_features=20, bias=True)
+  (4): Linear(in_features=20, out_features=20, bias=True)
+  (5): Linear(in_features=20, out_features=20, bias=True)
+  (6): Linear(in_features=20, out_features=2, bias=True)
+)), ('u_bn_layer', ModuleList(
+  (0): BatchNorm1d(20, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (1): BatchNorm1d(20, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (2): BatchNorm1d(20, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (3): BatchNorm1d(20, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (4): BatchNorm1d(20, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (5): BatchNorm1d(20, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (6): BatchNorm1d(20, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+)), ('p_layer', ModuleList(
+  (0): Linear(in_features=3, out_features=20, bias=True)
+  (1): Linear(in_features=20, out_features=20, bias=True)
+  (2): Linear(in_features=20, out_features=20, bias=True)
+  (3): Linear(in_features=20, out_features=20, bias=True)
+  (4): Linear(in_features=20, out_features=20, bias=True)
+  (5): Linear(in_features=20, out_features=20, bias=True)
+  (6): Linear(in_features=20, out_features=1, bias=True)
+)), ('p_bn_layer', ModuleList(
+  (0): BatchNorm1d(20, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (1): BatchNorm1d(20, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (2): BatchNorm1d(20, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (3): BatchNorm1d(20, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (4): BatchNorm1d(20, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (5): BatchNorm1d(20, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+  (6): BatchNorm1d(20, eps=1e-05, momentum=0.1, affine=True, track_running_stats=True)
+)), ('loss', MSELoss()), ('activation', Tanh())]), 'f_fun': <function f_example at 0x7f69f9c1ef70>, 'n': 10, 'dim_in': 2, 'deriv_map': array([[1., 0., 0.],
+       [0., 1., 0.],
+       [0., 0., 1.],
+       [0., 0., 0.],
+       [0., 0., 0.],
+       [0., 1., 0.],
+       [0., 0., 1.],
+       [0., 1., 0.],
+       [0., 0., 1.],
+       [0., 2., 0.],
+       [0., 0., 2.]]), 'zeta_map': array([-1, -1,  0,  1,  0,  0,  1,  1,  0,  1]), 'deriv_condition_deriv_map': array([[1, 0],
+       [0, 1]]), 'deriv_condition_zeta_map': array([0, 1]), 'dim_out': 2, 'coordinate': array([0, 1]), 'phi_fun': <function phi_example at 0x7f69f9c39160>, 'lr': 0.001, 'weight_decay': 0, 'batch_normalization': False, 'nb_states': 10000, 'ori_x_lo': 0, 'ori_x_hi': 6.283185307179586, 'x_lo': -0.6283185307179586, 'x_hi': 6.911503837897545, 't_lo': 0.0, 't_hi': 0.25, 'epochs': 10000, 'device': device(type='cuda'), 'verbose': True, 'fix_all_dim_except_first': False, 'working_dir': 'logs/20221106-212837-taylor_green_2d', 'working_dir_full_path': '/home/nguwijy/repo/deep_branching_with_domain/notebooks/logs/20221106-212837-taylor_green_2d'}
+2022-11-06 21:28:44,814 | root |  INFO: Epoch 0 with loss 0.29005107283592224
+2022-11-06 21:29:26,944 | root |  INFO: Epoch 500 with loss 0.032900989055633545
+2022-11-06 21:30:08,144 | root |  INFO: Epoch 1000 with loss 0.019409626722335815
+2022-11-06 21:30:50,304 | root |  INFO: Epoch 1500 with loss 0.010213788598775864
+2022-11-06 21:31:36,882 | root |  INFO: Epoch 2000 with loss 0.0051663420163095
+2022-11-06 21:32:27,146 | root |  INFO: Epoch 2500 with loss 0.0017441695090383291
+2022-11-06 21:33:13,393 | root |  INFO: Epoch 3000 with loss 0.0018337336368858814
+2022-11-06 21:33:57,463 | root |  INFO: Epoch 3500 with loss 0.0007056955946609378
+2022-11-06 21:34:44,053 | root |  INFO: Epoch 4000 with loss 0.0005807155393995345
+2022-11-06 21:35:29,262 | root |  INFO: Epoch 4500 with loss 0.0003931762767024338
+2022-11-06 21:36:14,352 | root |  INFO: Epoch 5000 with loss 0.0019611106254160404
